@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - Vulnerability Scanner{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header text-center" style="background: #007bff; color: white;">
+                    <h3 style="color: white; margin-bottom: 0;">Login ke Vulnerability Scanner</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Google Login Button -->
+                    <div class="mb-4">
+                        <a href="/accounts/google/login/" class="btn btn-danger btn-lg w-100 mb-3">
+                            <i class="fab fa-google me-2"></i>
+                            Masuk dengan Google
+                        </a>
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <span class="text-muted">atau</span>
+                    </div>
+                    
+                    <!-- Email Login Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #00d4aa; font-weight: 600;">Email</label>
+                            <input type="email" name="login" class="form-control" placeholder="Masukkan email" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #00d4aa; font-weight: 600;">Password</label>
+                            <input type="password" name="password" class="form-control" placeholder="Masukkan password" required>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="remember" class="form-check-input" id="remember">
+                            <label class="form-check-label" for="remember" style="color: #6c757d;">Ingat saya</label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100" style="background: #00d4aa; border-color: #00d4aa;">Login</button>
+                    </form>
+                    
+                    <div class="text-center mt-3">
+                        <p style="color: #6c757d;">Belum punya akun? <a href="{% url 'account_signup' %}" style="color: #007bff;">Daftar sekarang</a></p>
+                        <p><a href="{% url 'account_reset_password' %}" style="color: #007bff;">Lupa password?</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

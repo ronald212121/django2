@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}NIKTO Scanner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .option-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .option-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .option-card.selected {
+        border-color: var(--primary-color);
+        background-color: rgba(44, 62, 80, 0.05);
+    }
+    
+    .option-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .option-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Page Heading -->
+            <div class="text-center mb-5" data-aos="fade-up">
+                <h1 class="fw-bold">NIKTO Scanner</h1>
+                <p class="text-muted">Pemindaian kerentanan web server menggunakan NIKTO</p>
+            </div>
+            
+            <div class="card shadow-sm border-0 rounded-lg" data-aos="fade-up">
+                <div class="card-body p-4">
+                    <div id="alert-placeholder"></div>
+                    
+                    <form action="{% url 'nikto_scan' %}" method="post" class="scan-form needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Target Input -->
+                        <div class="mb-4">
+                            <label for="target" class="form-label">Target URL/IP</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-globe"></i></span>
+                                <input type="text" class="form-control" id="target" name="target" placeholder="misalnya: http://example.com atau 192.168.1.1" required>
+                                <div class="invalid-feedback">
+                                    Target tidak boleh kosong.
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">Masukkan URL atau alamat IP web server target. Disarankan menggunakan format lengkap (http://example.com).</small>
+                        </div>
+                        
+                        <!-- Port Input (Optional) -->
+                        <div class="mb-4">
+                            <label for="port" class="form-label">Port (Opsional)</label>
+                            <input type="number" class="form-control" id="port" name="port" placeholder="misalnya: 80, 443, 8080">
+                            <small class="form-text text-muted">Biarkan kosong untuk port default (80 untuk HTTP, 443 untuk HTTPS).</small>
+                        </div>
+                        
+                        <!-- Scan Type Options -->
+                        <div class="mb-4">
+                            <label class="form-label">Tipe Pemindaian</label>
+                            
+                            <div class="row g-3">
+                                <!-- Basic Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card h-100" data-scan-type="basic">
+                                        <div class="card-body text-center">
+                                            <div class="option-icon">
+                                                <i class="fas fa-search"></i>
+                                            </div>
+                                            <h5 class="card-title">Basic Scan</h5>
+                                            <p class="card-text small text-muted">Pemindaian dasar untuk kerentanan umum.</p>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input scan-type-radio" type="radio" name="scan_type" id="scan_type_basic" value="basic" checked required>
+                                                <label class="form-check-label ms-2" for="scan_type_basic">
+                                                    Pilih
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Full Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card h-100" data-scan-type="full">
+                                        <div class="card-body text-center">
+                                            <div class="option-icon">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </div>
+                                            <h5 class="card-title">Full Scan</h5>
+                                            <p class="card-text small text-muted">Pemindaian mendalam dengan semua tes.</p>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input scan-type-radio" type="radio" name="scan_type" id="scan_type_full" value="full" required>
+                                                <label class="form-check-label ms-2" for="scan_type_full">
+                                                    Pilih
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- SSL/TLS Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card h-100" data-scan-type="ssl">
+                                        <div class="card-body text-center">
+                                            <div class="option-icon">
+                                                <i class="fas fa-lock"></i>
+                                            </div>
+                                            <h5 class="card-title">SSL/TLS Scan</h5>
+                                            <p class="card-text small text-muted">Fokus pemindaian pada kerentanan SSL/TLS.</p>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input scan-type-radio" type="radio" name="scan_type" id="scan_type_ssl" value="ssl" required>
+                                                <label class="form-check-label ms-2" for="scan_type_ssl">
+                                                    Pilih
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Custom Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card h-100" data-scan-type="custom">
+                                        <div class="card-body text-center">
+                                            <div class="option-icon">
+                                                <i class="fas fa-cogs"></i>
+                                            </div>
+                                            <h5 class="card-title">Custom Scan</h5>
+                                            <p class="card-text small text-muted">Kustomisasi parameter pemindaian.</p>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input scan-type-radio" type="radio" name="scan_type" id="scan_type_custom" value="custom" required>
+                                                <label class="form-check-label ms-2" for="scan_type_custom">
+                                                    Pilih
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="invalid-feedback">
+                                Silahkan pilih tipe pemindaian.
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Options (Hidden by default) -->
+                        <div id="custom_options" class="mb-4 d-none">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Opsi Kustom</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label for="tuning" class="form-label">Tuning</label>
+                                        <input type="text" class="form-control" id="tuning" name="tuning" placeholder="misalnya: 1, 2, 3, x">
+                                        <small class="form-text text-muted">
+                                            Format tuning NIKTO:
+                                            <br>0 - File Upload
+                                            <br>1 - Misconfig / Info Disclosure
+                                            <br>2 - Tes Umum
+                                            <br>3 - Versi Usang
+                                            <br>4 - Masalah SSL/TLS
+                                            <br>5 - XSS
+                                            <br>6 - Injeksi
+                                            <br>7 - Remote File Retrieval
+                                            <br>9 - SQL Injection
+                                            <br>x - Pemindaian Lengkap (semua opsi)
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="no_robots" name="no_robots">
+                                        <label class="form-check-label" for="no_robots">
+                                            Jangan periksa robots.txt
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="evasion" name="evasion">
+                                        <label class="form-check-label" for="evasion">
+                                            Gunakan teknik evasion
+                                        </label>
+                                        <small class="d-block form-text text-muted">Teknik untuk menghindari deteksi IDS/IPS.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Options -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="show_advanced" name="show_advanced">
+                                <label class="form-check-label" for="show_advanced">Tampilkan opsi lanjutan</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Options (Hidden by default) -->
+                        <div id="advanced_options" class="mb-4 d-none">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Opsi Lanjutan</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label for="timeout" class="form-label">Timeout (dalam detik)</label>
+                                        <input type="number" class="form-control" id="timeout" name="timeout" min="1" placeholder="Default: 10">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="useragent" class="form-label">User Agent</label>
+                                        <input type="text" class="form-control" id="useragent" name="useragent" placeholder="Default: Mozilla/5.0 (NIKTO)">
+                                    </div>
+                                    
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="vhost" name="vhost">
+                                        <label class="form-check-label" for="vhost">
+                                            Pindai Virtual Host
+                                        </label>
+                                        <small class="d-block form-text text-muted">Berguna jika server menghosting beberapa website.</small>
+                                    </div>
+                                    
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="no_ssl" name="no_ssl">
+                                        <label class="form-check-label" for="no_ssl">
+                                            Nonaktifkan pemindaian SSL
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                <i class="fas fa-search me-2"></i> Mulai Pemindaian
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Additional Info -->
+            <div class="card mt-4 border-0 shadow-sm" data-aos="fade-up" data-aos-delay="100">
+                <div class="card-body p-4">
+                    <h4 class="card-title">Tentang NIKTO Scanner</h4>
+                    <p class="card-text">NIKTO adalah scanner web server open source yang melakukan pemeriksaan komprehensif terhadap web server untuk berbagai item, termasuk:</p>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> File dan program berbahaya
+                                </li>
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Versi software yang usang
+                                </li>
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Masalah spesifik pada versi dan konfigurasi
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Default file dan program server
+                                </li>
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Kesalahan pengonfigurasan server
+                                </li>
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Indeks direktori dan kebocoran informasi
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // Handler untuk option cards
+    const optionCards = document.querySelectorAll('.option-card');
+    const radioButtons = document.querySelectorAll('.scan-type-radio');
+    
+    // Highlight selected card on load
+    highlightSelectedCard();
+    
+    // Add event listeners to cards
+    optionCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const scanType = this.getAttribute('data-scan-type');
+            const radio = document.querySelector(`#scan_type_${scanType}`);
+            
+            if (radio) {
+                radio.checked = true;
+                highlightSelectedCard();
+                toggleCustomOptions();
+            }
+        });
+    });
+</script>
+{% endblock %}    
+    // Add event listeners to radio buttons
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function() {
+            highlightSelectedCard();
+            toggleCustomOptions();
+        });
+    });
+    
+    // Toggle advanced options
+    const showAdvancedCheckbox = document.getElementById('show_advanced');
+    const advancedOptionsDiv = document.getElementById('advanced_options');
+    
+    showAdvancedCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            advancedOptionsDiv.classList.remove('d-none');
+        } else {
+            advancedOptionsDiv.classList.add('d-none');
+        }
+    });
+    
+    // Toggle custom options function
+    function toggleCustomOptions() {
+        const customOptionsDiv = document.getElementById('custom_options');
+        const isCustomScan = document.getElementById('scan_type_custom').checked;
+        
+        if (isCustomScan) {
+            customOptionsDiv.classList.remove('d-none');
+        } else {
+            customOptionsDiv.classList.add('d-none');
+        }
+    }
+    
+    // Call toggleCustomOptions on page load
+    toggleCustomOptions();
+    
+    // Highlight selected card function
+    function highlightSelectedCard() {
+        // Remove selected class from all cards
+        optionCards.forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        // Find checked radio and highlight its card
+        const checkedRadio = document.querySelector('.scan-type-radio:checked');
+        if (checkedRadio) {
+            const scanType = checkedRadio.value;
+            const selectedCard = document.querySelector(`.option-card[data-scan-type="${scanType}"]`);
+            
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+        }
+    }
+});
+        
+        // Add event listeners to radio buttons
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', function() {
+                highlightSelectedCard();
+                toggleCustomOptions();
+            });
+        });
+        
+        // Toggle advanced options
+        const showAdvancedCheckbox = document.getElementById('show_advanced');
+        const advancedOptionsDiv = document.getElementById('advanced_options');
+        
+        showAdvancedCheckbox.addEventListener('change', function()) {
+            if (this.checked) {
+                advancedOptionsDiv.classList.remove('d-none');
+            } else {
+                advancedOptionsDiv.classList.add('d-none');
+            }}

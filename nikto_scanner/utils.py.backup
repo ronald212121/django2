@@ -1,0 +1,350 @@
+import subprocess
+import json
+import re
+from core.models import ScanResult
+
+def run_nikto_scan(target, scan_type, user):
+    print(f"Starting NIKTO {scan_type} scan for {target}...")
+    
+    # Construct command based on scan type - OPTIMIZED with realistic timeouts
+    if scan_type == 'basic':
+        cmd = f"nikto -h {target} -Tuning 1,2,3,4,5,6,7,8,9"
+        timeout_seconds = 300  # 5 minutes
+    elif scan_type == 'full':
+        # OPTIMIZED: More reasonable full scan
+        cmd = f"nikto -h {target} -Tuning 1,2,3,4,5,6,7,8,9,a,b,c -timeout 30"
+        timeout_seconds = 1800  # 30 minutes
+    elif scan_type == 'ssl':
+        cmd = f"nikto -h {target} -Tuning 4 -ssl"
+        timeout_seconds = 600  # 10 minutes
+    else:  # custom
+        cmd = f"nikto -h {target}"
+        timeout_seconds = 900  # 15 minutes
+    
+    print(f"Executing: {cmd}")
+    print(f"Timeout set to: {timeout_seconds // 60} minutes")
+    
+    try:
+        # Run Nikto scan with appropriate timeout
+        process = subprocess.Popen(
+            cmd, 
+            shell=True, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True
+        )
+        stdout, stderr = process.communicate(timeout=timeout_seconds)
+        
+        print(f"NIKTO stdout length: {len(stdout)}")
+        print(f"NIKTO stderr: {stderr[:200] if stderr else 'None'}")
+        
+        # DEBUG: Print first 500 chars of output
+        print(f"NIKTO output preview: {stdout[:500]}...")
+        
+        # Parse the output - SUPER ROBUST parsing
+        if stdout and len(stdout.strip()) > 0:
+            vulnerabilities = parse_nikto_output(stdout)
+            
+            result = {
+                'scan_successful': True,
+                'target': target,
+                'scan_type': scan_type,
+                'nikto_output': stdout,
+                'vulnerabilities': vulnerabilities,
+                'total_findings': len(vulnerabilities),
+                'raw_output_preview': stdout[:1000],  # For debugging
+                'scan_duration': f"{timeout_seconds // 60} minutes max"
+            }
+            
+            print(f"NIKTO scan successful - found {len(vulnerabilities)} findings")
+            
+        else:
+            print("NIKTO scan produced no output")
+            result = {
+                'error': 'NIKTO scan produced no output',
+                'target': target,
+                'scan_type': scan_type,
+                'stderr': stderr,
+                'raw_output': stdout
+            }
+    
+    except subprocess.TimeoutExpired:
+        print(f"NIKTO scan timeout after {timeout_seconds // 60} minutes")
+        # Try to get partial results
+        try:
+            process.kill()
+            partial_stdout, partial_stderr = process.communicate()
+            print(f"Partial output length: {len(partial_stdout) if partial_stdout else 0}")
+            
+            if partial_stdout and len(partial_stdout.strip()) > 100:
+                # Try to parse partial results
+                vulnerabilities = parse_nikto_output(partial_stdout)
+                result = {
+                    'scan_successful': True,
+                    'target': target,
+                    'scan_type': scan_type,
+                    'nikto_output': partial_stdout,
+                    'vulnerabilities': vulnerabilities,
+                    'total_findings': len(vulnerabilities),
+                    'warning': f'Scan timeout after {timeout_seconds // 60} minutes - partial results',
+                    'scan_duration': f"{timeout_seconds // 60} minutes (timeout)"
+                }
+                print(f"NIKTO partial scan - found {len(vulnerabilities)} findings before timeout")
+            else:
+                result = {
+                    'error': f'NIKTO scan timeout after {timeout_seconds // 60} minutes - no usable results',
+                    'target': target,
+                    'scan_type': scan_type,
+                    'suggestion': 'Try using basic scan for faster results, or increase timeout for full scan'
+                }
+        except:
+            result = {
+                'error': f'NIKTO scan timeout after {timeout_seconds // 60} minutes',
+                'target': target,
+                'scan_type': scan_type,
+                'suggestion': 'Try using basic scan for faster results'
+            }
+    except Exception as e:
+        print(f"NIKTO scan exception: {e}")
+        result = {
+            'error': str(e),
+            'target': target,
+            'scan_type': scan_type
+        }
+    
+    # Count vulnerabilities by severity - IMPROVED classification
+    low, medium, high, critical, info = 0, 0, 0, 0, 0
+    
+    if 'vulnerabilities' in result:
+        for vuln in result['vulnerabilities']:
+            severity = vuln.get('severity', 'info').lower()
+            
+            if severity == 'critical':
+                critical += 1
+            elif severity == 'high':
+                high += 1
+            elif severity == 'medium':
+                medium += 1
+            elif severity == 'low':
+                low += 1
+            else:
+                info += 1
+    
+    print(f"NIKTO vulnerabilities classified - Critical: {critical}, High: {high}, Medium: {medium}, Low: {low}, Info: {info}")
+    
+    # Store the scan result
+    scan_result = ScanResult(
+        user=user,
+        target=target,
+        tool='nikto',
+        scan_type=scan_type,
+        result=json.dumps(result, default=str, indent=2),
+        low_count=low,
+        medium_count=medium,
+        high_count=high,
+        critical_count=critical,
+        info_count=info
+    )
+    scan_result.save()
+    
+    print(f"NIKTO scan result saved for {target} - Type: {scan_type}, ID: {scan_result.id}")
+    return scan_result
+
+def parse_nikto_output(output):
+    """Parse NIKTO text output to extract vulnerabilities - SUPER ROBUST VERSION"""
+    vulnerabilities = []
+    
+    print(f"DEBUG: Starting to parse Nikto output ({len(output)} chars)")
+    
+    # Split output into lines
+    lines = output.split('\n')
+    print(f"DEBUG: Total lines to process: {len(lines)}")
+    
+    # Process each line
+    for i, line in enumerate(lines):
+        original_line = line
+        line = line.strip()
+        
+        # Skip empty lines
+        if not line:
+            continue
+        
+        print(f"DEBUG Line {i}: {line[:80]}...")
+        
+        # Look for lines that start with + (findings in Nikto)
+        if line.startswith('+ '):
+            
+            # Define patterns to SKIP (headers, footers, non-vulnerabilities)
+            skip_patterns = [
+                'Target IP:', 'Target Hostname:', 'Target Port:', 
+                'Start Time:', 'End Time:', 'Server:', 'host(s) tested',
+                'items checked:', 'error(s) and', 'Nikto v', 'Root page',
+                'No CGI Directories found'
+            ]
+            
+            # Check if this line should be skipped
+            should_skip = any(pattern in line for pattern in skip_patterns)
+            if should_skip:
+                print(f"DEBUG: SKIPPING header/footer: {line[:50]}...")
+                continue
+            
+            # This looks like a potential vulnerability/finding
+            print(f"DEBUG: POTENTIAL VULNERABILITY: {line}")
+            
+            # Clean up the description (remove the + prefix)
+            description = line.replace('+ ', '').strip()
+            
+            # Skip very short descriptions (likely not vulnerabilities)
+            if len(description) < 15:
+                print(f"DEBUG: SKIPPING short description: {description}")
+                continue
+            
+            # Extract path/URL if present
+            url_match = re.search(r'(/[^\s,]+)', line)
+            path = url_match.group(1) if url_match else '/'
+            
+            # Extract OSVDB ID if present
+            osvdb_match = re.search(r'OSVDB-(\d+)', line)
+            osvdb_id = osvdb_match.group(1) if osvdb_match else None
+            
+            # Extract CVE if present  
+            cve_match = re.search(r'CVE-(\d{4}-\d+)', line)
+            cve_id = cve_match.group(0) if cve_match else None
+            
+            # Classify severity
+            severity = classify_severity(description)
+            
+            vulnerability = {
+                'description': description,
+                'path': path,
+                'osvdb_id': osvdb_id,
+                'cve_id': cve_id,
+                'severity': severity,
+                'raw_line': original_line
+            }
+            
+            vulnerabilities.append(vulnerability)
+            print(f"DEBUG: ADDED VULNERABILITY: {description[:50]}... (Severity: {severity})")
+    
+    print(f"DEBUG: FINAL RESULT - Total vulnerabilities found: {len(vulnerabilities)}")
+    
+    # If still no vulnerabilities, try even more aggressive parsing
+    if len(vulnerabilities) == 0:
+        print("DEBUG: No vulnerabilities found with main parsing, trying AGGRESSIVE parsing...")
+        vulnerabilities = aggressive_parse_nikto_output(output)
+        print(f"DEBUG: Aggressive parsing found: {len(vulnerabilities)} vulnerabilities")
+    
+    return vulnerabilities
+
+def aggressive_parse_nikto_output(output):
+    """Super aggressive parsing - catch everything that might be a vulnerability"""
+    vulnerabilities = []
+    lines = output.split('\n')
+    
+    print("DEBUG: Starting AGGRESSIVE parsing...")
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Skip empty lines and obvious headers
+        if not line or line.startswith('-') or 'Nikto v' in line:
+            continue
+            
+        # Look for ANY line with security-related keywords
+        security_indicators = [
+            'header', 'disclosure', 'configuration', 'file', 'directory',
+            'server', 'version', 'access', 'policy', 'domain', 'cross',
+            'etag', 'inodes', 'powered-by', 'clickjacking', 'frame'
+        ]
+        
+        if any(indicator.lower() in line.lower() for indicator in security_indicators):
+            if len(line) > 20:  # Reasonable length
+                print(f"DEBUG AGGRESSIVE: Found potential issue: {line[:60]}...")
+                
+                vulnerability = {
+                    'description': line.replace('+ ', '').strip(),
+                    'path': '/',
+                    'severity': classify_severity(line),
+                    'source': 'aggressive_parsing',
+                    'raw_line': line
+                }
+                vulnerabilities.append(vulnerability)
+    
+    return vulnerabilities
+
+def classify_severity(description):
+    """Enhanced severity classification"""
+    desc_lower = description.lower()
+    
+    print(f"DEBUG CLASSIFY: {description[:50]}...")
+    
+    # Critical vulnerabilities
+    if any(keyword in desc_lower for keyword in [
+        'sql injection', 'remote code execution', 'rce', 'command injection',
+        'authentication bypass', 'directory traversal', 'file inclusion',
+        'shell', 'backdoor', 'admin panel', 'database', 'wildcard entry',
+        'full wildcard'
+    ]):
+        print("DEBUG CLASSIFY: -> CRITICAL")
+        return 'critical'
+    
+    # High vulnerabilities  
+    elif any(keyword in desc_lower for keyword in [
+        'cross-site scripting', 'xss', 'csrf', 'configuration error',
+        'unauthorized access', 'sensitive file', 'backup file',
+        'phpinfo', 'server-status', 'server-info', 'admin',
+        'login', 'password', 'config', 'x-frame-options', 'clickjacking',
+        'crossdomain', 'clientaccesspolicy', 'anti-clickjacking'
+    ]):
+        print("DEBUG CLASSIFY: -> HIGH")
+        return 'high'
+    
+    # Medium vulnerabilities
+    elif any(keyword in desc_lower for keyword in [
+        'information disclosure', 'version disclosure', 'banner',
+        'header', 'directory listing', 'robots.txt', 'sitemap',
+        'test file', 'example', 'default', 'server leaks', 'etags',
+        'retrieved x-powered-by', 'inodes', 'leaks inodes'
+    ]):
+        print("DEBUG CLASSIFY: -> MEDIUM")
+        return 'medium'
+    
+    # Low vulnerabilities
+    elif any(keyword in desc_lower for keyword in [
+        'cookie', 'method allowed', 'trace', 'debug', 'options',
+        'http method', 'header missing', 'lines'
+    ]):
+        print("DEBUG CLASSIFY: -> LOW")
+        return 'low'
+    
+    # Everything else is info
+    else:
+        print("DEBUG CLASSIFY: -> INFO")
+        return 'info'
+
+# Legacy functions kept for compatibility
+def alternative_parse_nikto_output(output):
+    """Alternative parsing method for different Nikto output formats - LEGACY"""
+    vulnerabilities = []
+    lines = output.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Look for any line that might contain vulnerability info
+        if any(keyword in line.lower() for keyword in [
+            'osvdb', 'cve', 'vulnerability', 'accessible', 'found',
+            'directory', 'file', 'script', 'config', 'admin',
+            'backup', 'test', 'default', 'robots.txt', 'sitemap',
+            'phpinfo', 'server-status', 'server-info'
+        ]) and len(line) > 20:
+            
+            vulnerability = {
+                'description': line,
+                'path': '/',
+                'severity': classify_severity(line),
+                'source': 'alternative_parsing'
+            }
+            vulnerabilities.append(vulnerability)
+    
+    return vulnerabilities

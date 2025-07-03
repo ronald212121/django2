@@ -1,0 +1,29 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc g++ libpq-dev curl sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements.txt yang sama dari root
+COPY requirements.txt .
+
+# Install Python dependencies (sama seperti main)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy files yang dibutuhkan core
+COPY core/ /app/core/
+COPY scanner_project/ /app/scanner_project/
+COPY manage.py /app/manage.py
+
+# Set environment
+ENV PYTHONPATH=/app
+ENV DJANGO_SETTINGS_MODULE=scanner_project.settings
+
+# Create directories
+RUN mkdir -p /app/media /app/static /app/logs
+
+EXPOSE 8000
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In Via Google - Vulnerability Scanner{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <!-- Main Card -->
+            <div class="card" style="border: none; border-radius: 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);">
+                <!-- Header -->
+                <div class="card-header text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px 20px 0 0; padding: 2rem;">
+                    <div class="mb-3">
+                        <div style="width: 80px; height: 80px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);">
+                            <i class="fab fa-google" style="font-size: 2.5rem; color: #db4437;"></i>
+                        </div>
+                    </div>
+                    <h3 style="color: white; font-weight: 700; margin-bottom: 0.5rem;">Sign In Via Google</h3>
+                    <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 0;">Secure authentication with your Google account</p>
+                </div>
+
+                <!-- Body -->
+                <div class="card-body" style="padding: 2.5rem;">
+                    <!-- Info Alert -->
+                    <div class="alert" style="background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: 12px; margin-bottom: 2rem;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle" style="color: #667eea; font-size: 1.2rem; margin-right: 12px;"></i>
+                            <div>
+                                <strong style="color: #667eea;">You are about to sign in</strong>
+                                <p style="margin-bottom: 0; color: #6c757d; font-size: 0.9rem;">
+                                    Using a third-party account from Google to access Vulnerability Scanner
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Benefits -->
+                    <div class="mb-4">
+                        <h6 style="color: #2d3748; font-weight: 600; margin-bottom: 1rem;">
+                            <i class="fas fa-check-circle" style="color: #38a169; margin-right: 8px;"></i>
+                            Benefits of Google Sign-In:
+                        </h6>
+                        <ul style="list-style: none; padding-left: 0;">
+                            <li style="padding: 0.5rem 0; color: #6c757d; display: flex; align-items: center;">
+                                <i class="fas fa-shield-alt" style="color: #38a169; margin-right: 12px; width: 16px;"></i>
+                                Secure authentication with 2FA support
+                            </li>
+                            <li style="padding: 0.5rem 0; color: #6c757d; display: flex; align-items: center;">
+                                <i class="fas fa-bolt" style="color: #667eea; margin-right: 12px; width: 16px;"></i>
+                                Quick and easy access
+                            </li>
+                            <li style="padding: 0.5rem 0; color: #6c757d; display: flex; align-items: center;">
+                                <i class="fas fa-user-shield" style="color: #805ad5; margin-right: 12px; width: 16px;"></i>
+                                No need to remember another password
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button onclick="continueWithGoogle()" class="btn btn-lg" style="background: #db4437; color: white; border: none; border-radius: 12px; padding: 1rem; font-weight: 600; transition: all 0.3s ease;">
+                            <i class="fab fa-google me-2"></i>
+                            Continue with Google
+                        </button>
+                        
+                        <a href="{% url 'account_login' %}" class="btn btn-outline-secondary btn-lg" style="border-radius: 12px; padding: 1rem; font-weight: 600;">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back to Login
+                        </a>
+                    </div>
+
+                    <!-- Security Notice -->
+                    <div class="mt-4">
+                        <div class="text-center">
+                            <small style="color: #a0aec0;">
+                                <i class="fas fa-lock me-1"></i>
+                                Your data is protected by Google's security standards
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Info Card -->
+            <div class="card mt-4" style="border: 1px solid #e2e8f0; border-radius: 16px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);">
+                <div class="card-body text-center" style="padding: 1.5rem;">
+                    <h6 style="color: #2d3748; font-weight: 600; margin-bottom: 0.5rem;">
+                        <i class="fas fa-question-circle me-2" style="color: #667eea;"></i>
+                        Why Google Sign-In?
+                    </h6>
+                    <p style="color: #6c757d; font-size: 0.9rem; margin-bottom: 0;">
+                        We use Google's secure authentication to protect your account and ensure you have quick access to our vulnerability scanning tools.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Footer Links -->
+            <div class="text-center mt-4">
+                <div class="d-flex justify-content-center gap-4">
+                    <a href="{% url 'about' %}" style="color: #6c757d; text-decoration: none; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle me-1"></i>About
+                    </a>
+                    <a href="{% url 'contact' %}" style="color: #6c757d; text-decoration: none; font-size: 0.9rem;">
+                        <i class="fas fa-envelope me-1"></i>Contact
+                    </a>
+                    <a href="#" style="color: #6c757d; text-decoration: none; font-size: 0.9rem;">
+                        <i class="fas fa-shield-alt me-1"></i>Privacy
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .card-header {
+        padding: 1.5rem !important;
+    }
+}
+</style>
+
+<script>
+function continueWithGoogle() {
+    // Add loading state
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Connecting...';
+    button.disabled = true;
+    
+    // Redirect to actual Google OAuth (replace with actual URL)
+    setTimeout(() => {
+        window.location.href = '/accounts/google/login/';
+    }, 1000);
+}
+
+// Add some interactive animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate elements on load
+    const elements = document.querySelectorAll('.card, .alert');
+    elements.forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            el.style.transition = 'all 0.6s ease';
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}

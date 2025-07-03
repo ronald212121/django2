@@ -1,0 +1,27 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc g++ libpq-dev curl sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements.txt yang sama dari root
+COPY requirements.txt .
+
+# Install Python dependencies (sama seperti container lain)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy scan_history dan core
+COPY scan_history/ /app/scan_history/
+COPY core/ /app/core/
+
+# Set environment
+ENV PYTHONPATH=/app
+
+# Create directories
+RUN mkdir -p /app/results /app/db
+
+EXPOSE 8000
+CMD ["python", "-c", "print('Scan History Ready'); import time; time.sleep(3600)"]

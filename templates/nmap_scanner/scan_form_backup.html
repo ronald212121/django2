@@ -1,0 +1,314 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}NMAP Scanner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .option-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .option-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .option-card.selected {
+        border-color: var(--primary-color);
+        background-color: rgba(44, 62, 80, 0.05);
+    }
+    
+    .option-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .option-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Page Heading -->
+            <div class="text-center mb-5" data-aos="fade-up">
+                <h1 class="fw-bold">NMAP Scanner</h1>
+                <p class="text-muted">Pemindaian keamanan jaringan dan sistem menggunakan NMAP</p>
+            </div>
+            
+            <div class="card shadow-sm border-0 rounded-lg" data-aos="fade-up">
+                <div class="card-body p-4">
+                    <div id="alert-placeholder"></div>
+                    
+                    <form action="{% url 'nmap_scan' %}" method="post" class="scan-form needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Target Input -->
+                        <div class="mb-4">
+                            <label for="target" class="form-label">Target (IP atau Domain)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-crosshairs"></i></span>
+                                <input type="text" class="form-control" id="target" name="target" placeholder="misalnya: 192.168.1.1 atau example.com" required>
+                                <div class="invalid-feedback">
+                                    Target tidak boleh kosong.
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">Masukkan alamat IP atau domain yang ingin dipindai.</small>
+                        </div>
+                        
+                        <!-- Scan Type Options -->
+                        <div class="mb-4">
+                            <label class="form-label">Tipe Pemindaian</label>
+                            
+                            <div class="row g-3">
+                                <!-- OS Detection -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card h-100" data-scan-type="os">
+                                        <div class="card-body text-center">
+                                            <div class="option-icon">
+                                                <i class="fas fa-laptop"></i>
+                                            </div>
+                                            <h5 class="card-title">OS Detection</h5>
+                                            <p class="card-text small text-muted">Deteksi sistem operasi yang berjalan pada target.</p>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input scan-type-radio" type="radio" name="scan_type" id="scan_type_os" value="os" required>
+                                                <label class="form-check-label ms-2" for="scan_type_os">
+                                                    Pilih
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Port Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card h-100" data-scan-type="port">
+                                        <div class="card-body text-center">
+                                            <div class="option-icon">
+                                                <i class="fas fa-network-wired"></i>
+                                            </div>
+                                            <h5 class="card-title">Port Scan</h5>
+                                            <p class="card-text small text-muted">Pemindaian port yang terbuka pada target.</p>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input scan-type-radio" type="radio" name="scan_type" id="scan_type_port" value="port" required>
+                                                <label class="form-check-label ms-2" for="scan_type_port">
+                                                    Pilih
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Vulnerability Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card h-100" data-scan-type="vuln">
+                                        <div class="card-body text-center">
+                                            <div class="option-icon">
+                                                <i class="fas fa-bug"></i>
+                                            </div>
+                                            <h5 class="card-title">Vulnerability</h5>
+                                            <p class="card-text small text-muted">Pemindaian kerentanan menggunakan script vuln.</p>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input scan-type-radio" type="radio" name="scan_type" id="scan_type_vuln" value="vuln" required>
+                                                <label class="form-check-label ms-2" for="scan_type_vuln">
+                                                    Pilih
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Comprehensive Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card h-100" data-scan-type="comprehensive">
+                                        <div class="card-body text-center">
+                                            <div class="option-icon">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </div>
+                                            <h5 class="card-title">Comprehensive</h5>
+                                            <p class="card-text small text-muted">Pemindaian menyeluruh (OS, port, service, scripts).</p>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input scan-type-radio" type="radio" name="scan_type" id="scan_type_comprehensive" value="comprehensive" checked required>
+                                                <label class="form-check-label ms-2" for="scan_type_comprehensive">
+                                                    Pilih
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="invalid-feedback">
+                                Silahkan pilih tipe pemindaian.
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Options (Advanced) -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="show_advanced" name="show_advanced">
+                                <label class="form-check-label" for="show_advanced">Tampilkan opsi lanjutan</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Options (Hidden by default) -->
+                        <div id="advanced_options" class="mb-4 d-none">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Opsi Lanjutan</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label for="timing_template" class="form-label">Timing Template</label>
+                                        <select class="form-select" id="timing_template" name="timing_template">
+                                            <option value="0">T0 - Sangat Lambat (Paranoid)</option>
+                                            <option value="1">T1 - Lambat (Sneaky)</option>
+                                            <option value="2">T2 - Cukup Lambat (Polite)</option>
+                                            <option value="3" selected>T3 - Normal</option>
+                                            <option value="4">T4 - Cukup Cepat (Aggressive)</option>
+                                            <option value="5">T5 - Sangat Cepat (Insane)</option>
+                                        </select>
+                                        <small class="form-text text-muted">Kecepatan pemindaian. Nilai lebih tinggi = lebih cepat tapi lebih mudah terdeteksi.</small>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="port_range" class="form-label">Range Port</label>
+                                        <input type="text" class="form-control" id="port_range" name="port_range" placeholder="misalnya: 1-1000 atau 22,80,443">
+                                        <small class="form-text text-muted">Port yang akan dipindai. Kosongkan untuk default.</small>
+                                    </div>
+                                    
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="no_ping" name="no_ping">
+                                        <label class="form-check-label" for="no_ping">
+                                            Pindai tanpa ping (skip host discovery)
+                                        </label>
+                                        <small class="d-block form-text text-muted">Pindai host meskipun tidak merespon ping.</small>
+                                    </div>
+                                    
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="aggressive" name="aggressive">
+                                        <label class="form-check-label" for="aggressive">
+                                            Mode Aggressive
+                                        </label>
+                                        <small class="d-block form-text text-muted">Aktifkan OS detection, version detection, script scanning, dan traceroute.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                <i class="fas fa-search me-2"></i> Mulai Pemindaian
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Additional Info -->
+            <div class="card mt-4 border-0 shadow-sm" data-aos="fade-up" data-aos-delay="100">
+                <div class="card-body p-4">
+                    <h4 class="card-title">Tentang NMAP Scanner</h4>
+                    <p class="card-text">NMAP (Network Mapper) adalah tool open-source untuk eksplorasi jaringan dan audit keamanan. Beberapa fitur utama NMAP:</p>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Host discovery
+                                </li>
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Port scanning
+                                </li>
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Version detection
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> OS detection
+                                </li>
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Scriptable interaction with target
+                                </li>
+                                <li class="list-group-item bg-transparent px-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i> Pemindaian kerentanan
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handler untuk option cards
+        const optionCards = document.querySelectorAll('.option-card');
+        const radioButtons = document.querySelectorAll('.scan-type-radio');
+        
+        // Highlight selected card on load
+        highlightSelectedCard();
+        
+        // Add event listeners to cards
+        optionCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const scanType = this.getAttribute('data-scan-type');
+                const radio = document.querySelector(`#scan_type_${scanType}`);
+                
+                if (radio) {
+                    radio.checked = true;
+                    highlightSelectedCard();
+                }
+            });
+        });
+        
+        // Add event listeners to radio buttons
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', highlightSelectedCard);
+        });
+        
+        // Toggle advanced options
+        const showAdvancedCheckbox = document.getElementById('show_advanced');
+        const advancedOptionsDiv = document.getElementById('advanced_options');
+        
+        showAdvancedCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                advancedOptionsDiv.classList.remove('d-none');
+            } else {
+                advancedOptionsDiv.classList.add('d-none');
+            }
+        });
+        
+        function highlightSelectedCard() {
+            // Remove selected class from all cards
+            optionCards.forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Find checked radio and highlight its card
+            const checkedRadio = document.querySelector('.scan-type-radio:checked');
+            if (checkedRadio) {
+                const scanType = checkedRadio.value;
+                const selectedCard = document.querySelector(`.option-card[data-scan-type="${scanType}"]`);
+                
+                if (selectedCard) {
+                    selectedCard.classList.add('selected');
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

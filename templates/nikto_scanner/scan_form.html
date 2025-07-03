@@ -1,0 +1,1037 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}NIKTO Scanner - Enhanced{% endblock %}
+
+{% block extra_css %}
+<style>
+    .option-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid #e9ecef;
+        height: 100%;
+    }
+    
+    .option-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        border-color: #007bff;
+    }
+    
+    .option-card.selected {
+        border-color: #007bff;
+        background-color: rgba(0, 123, 255, 0.05);
+        transform: translateY(-3px);
+    }
+    
+    .option-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .preset-btn {
+        margin-bottom: 0.5rem;
+        text-align: left;
+        border: 1px solid #dee2e6;
+    }
+    
+    .preset-btn:hover {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+    
+    .preset-btn.active {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+    
+    .custom-parameters-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+    
+    .tuning-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .form-check-custom {
+        padding: 0.5rem;
+        border-radius: 5px;
+        transition: background-color 0.2s;
+    }
+    
+    .form-check-custom:hover {
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+    
+    .code-example {
+        background-color: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 0.75rem;
+        font-family: 'Courier New', monospace;
+        border-radius: 0 5px 5px 0;
+    }
+
+    /* Enhanced Spinning Shield Loading Animation */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(5px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .loading-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .loading-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 25px;
+        padding: 50px 40px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        transform: scale(0.8);
+        transition: transform 0.3s ease-in-out;
+        min-width: 350px;
+    }
+
+    .loading-overlay.active .loading-container {
+        transform: scale(1);
+    }
+
+    /* Main Shield Loader */
+    .shield-loader {
+        width: 100px;
+        height: 100px;
+        position: relative;
+        margin: 0 auto 30px;
+    }
+
+    /* Shield Icon - NIKTO themed */
+    .shield-loader::before {
+        content: "🛡️";
+        font-size: 70px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: spinShield 2.5s linear infinite;
+        filter: drop-shadow(0 0 15px rgba(0, 123, 255, 0.6));
+        z-index: 2;
+    }
+
+    /* Outer Ring - NIKTO colors */
+    .shield-loader::after {
+        content: "";
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border: 4px solid transparent;
+        border-top: 4px solid #007bff;
+        border-right: 4px solid rgba(0, 123, 255, 0.3);
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: spinRing 2s linear infinite;
+        z-index: 1;
+    }
+
+    /* Inner Ring */
+    .shield-loader .inner-ring {
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        border: 3px solid transparent;
+        border-bottom: 3px solid #dc3545;
+        border-left: 3px solid rgba(220, 53, 69, 0.3);
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: spinRingReverse 1.5s linear infinite;
+        z-index: 0;
+    }
+
+    /* Scanning Effect */
+    .shield-loader .scan-line {
+        position: absolute;
+        width: 2px;
+        height: 60px;
+        background: linear-gradient(to top, transparent, #007bff, transparent);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -100%);
+        transform-origin: bottom center;
+        animation: scanRotate 3s linear infinite;
+        z-index: 3;
+    }
+
+    /* Particles Effect */
+    .shield-loader .particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: #007bff;
+        border-radius: 50%;
+        opacity: 0;
+        animation: particleFloat 2s ease-in-out infinite;
+    }
+
+    .shield-loader .particle:nth-child(2) {
+        top: 20%;
+        left: 80%;
+        animation-delay: 0.5s;
+    }
+
+    .shield-loader .particle:nth-child(3) {
+        bottom: 20%;
+        right: 80%;
+        animation-delay: 1s;
+    }
+
+    .shield-loader .particle:nth-child(4) {
+        bottom: 30%;
+        left: 15%;
+        animation-delay: 1.5s;
+    }
+
+    /* Loading Text Styles */
+    .loading-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #fff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .loading-subtitle {
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 25px;
+        font-weight: 400;
+    }
+
+    .loading-details {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 25px;
+        line-height: 1.5;
+    }
+
+    /* Animated Dots */
+    .loading-dots::after {
+        content: '';
+        animation: loadingDots 1.5s infinite;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+        width: 250px;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        margin: 20px auto;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #007bff 0%, #dc3545 50%, #007bff 100%);
+        border-radius: 4px;
+        animation: progressFlow 3s ease-in-out infinite;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+    }
+
+    .progress-text {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 10px;
+        font-weight: 500;
+    }
+
+    /* Status Indicators */
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 20px;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .status-icon {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #007bff;
+        margin-right: 8px;
+        animation: statusPulse 2s ease-in-out infinite;
+        box-shadow: 0 0 8px rgba(0, 123, 255, 0.6);
+    }
+
+    /* Animations */
+    @keyframes spinShield {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @keyframes spinRing {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @keyframes spinRingReverse {
+        0% { transform: translate(-50%, -50%) rotate(360deg); }
+        100% { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+
+    @keyframes scanRotate {
+        0% { transform: translate(-50%, -100%) rotate(0deg); opacity: 1; }
+        100% { transform: translate(-50%, -100%) rotate(360deg); opacity: 1; }
+    }
+
+    @keyframes particleFloat {
+        0%, 100% { opacity: 0; transform: translateY(0px) scale(1); }
+        50% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+    }
+
+    @keyframes loadingDots {
+        0%, 20% { content: ''; }
+        40% { content: '.'; }
+        60% { content: '..'; }
+        80%, 100% { content: '...'; }
+    }
+
+    @keyframes progressFlow {
+        0% { width: 0%; transform: translateX(-100%); }
+        50% { width: 100%; transform: translateX(0%); }
+        100% { width: 100%; transform: translateX(100%); }
+    }
+
+    @keyframes statusPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.8; }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .loading-container {
+            margin: 20px;
+            padding: 40px 30px;
+            min-width: 300px;
+        }
+        
+        .shield-loader {
+            width: 80px;
+            height: 80px;
+        }
+        
+        .shield-loader::before {
+            font-size: 50px;
+        }
+        
+        .shield-loader::after {
+            width: 100px;
+            height: 100px;
+        }
+        
+        .loading-title {
+            font-size: 20px;
+        }
+        
+        .progress-container {
+            width: 200px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Page Heading -->
+            <div class="text-center mb-5" data-aos="fade-up">
+                <h1 class="fw-bold text-primary">
+                    <i class="fas fa-shield-alt me-3"></i>NIKTO Scanner Enhanced
+                </h1>
+                <p class="text-muted fs-5">Advanced Web Vulnerability Scanner dengan Custom Parameters</p>
+            </div>
+            
+            <!-- Alert Messages -->
+            {% if messages %}
+                <div class="alert-container mb-4">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>{{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="card shadow-lg border-0 rounded-lg" data-aos="fade-up">
+                <div class="card-header bg-primary text-white py-3">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-cog me-2"></i>Scan Configuration
+                    </h3>
+                </div>
+                
+                <div class="card-body p-4">
+                    <form action="{% url 'nikto_scan' %}" method="post" id="nikto-scan-form" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Target Input -->
+                        <div class="mb-4">
+                            <label for="target" class="form-label fw-bold">
+                                <i class="fas fa-globe me-2 text-primary"></i>Target URL/IP
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="fas fa-crosshairs"></i></span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="target" 
+                                       name="target" 
+                                       placeholder="http://testphp.vulnweb.com atau 192.168.1.1" 
+                                       required>
+                                <div class="invalid-feedback">
+                                    Please provide a valid target URL or IP address.
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Masukkan URL lengkap (dengan http/https) atau alamat IP. Contoh: http://example.com
+                            </div>
+                        </div>
+                        
+                        <!-- Port Input -->
+                        <div class="mb-4">
+                            <label for="port" class="form-label fw-bold">
+                                <i class="fas fa-plug me-2 text-success"></i>Port (Optional)
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="port" 
+                                   name="port" 
+                                   min="1" 
+                                   max="65535"
+                                   placeholder="80, 443, 8080, 8443">
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Kosongkan untuk menggunakan port default (80 untuk HTTP, 443 untuk HTTPS)
+                            </div>
+                        </div>
+                        
+                        <!-- Scan Type Selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold mb-3">
+                                <i class="fas fa-tasks me-2 text-warning"></i>Scan Type Selection
+                            </label>
+                            
+                            <div class="row g-3">
+                                <!-- Basic Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card" data-scan-type="basic">
+                                        <div class="card-body text-center p-3">
+                                            <div class="option-icon text-primary">
+                                                <i class="fas fa-search"></i>
+                                            </div>
+                                            <h6 class="card-title fw-bold">Basic Scan</h6>
+                                            <p class="card-text small text-muted mb-3">
+                                                Standard vulnerability checks
+                                            </p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                       type="radio" 
+                                                       name="scan_type" 
+                                                       id="basic" 
+                                                       value="basic" 
+                                                       checked>
+                                                <label class="form-check-label fw-bold text-primary" for="basic">
+                                                    Select
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Full Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card" data-scan-type="full">
+                                        <div class="card-body text-center p-3">
+                                            <div class="option-icon text-success">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </div>
+                                            <h6 class="card-title fw-bold">Full Scan</h6>
+                                            <p class="card-text small text-muted mb-3">
+                                                Comprehensive deep scan
+                                            </p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                       type="radio" 
+                                                       name="scan_type" 
+                                                       id="full" 
+                                                       value="full">
+                                                <label class="form-check-label fw-bold text-success" for="full">
+                                                    Select
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- SSL/TLS Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card" data-scan-type="ssl">
+                                        <div class="card-body text-center p-3">
+                                            <div class="option-icon text-warning">
+                                                <i class="fas fa-lock"></i>
+                                            </div>
+                                            <h6 class="card-title fw-bold">SSL/TLS Scan</h6>
+                                            <p class="card-text small text-muted mb-3">
+                                                SSL/TLS vulnerability focus
+                                            </p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                       type="radio" 
+                                                       name="scan_type" 
+                                                       id="ssl" 
+                                                       value="ssl">
+                                                <label class="form-check-label fw-bold text-warning" for="ssl">
+                                                    Select
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Custom Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card" data-scan-type="custom">
+                                        <div class="card-body text-center p-3">
+                                            <div class="option-icon text-info">
+                                                <i class="fas fa-cogs"></i>
+                                            </div>
+                                            <h6 class="card-title fw-bold">Custom Scan</h6>
+                                            <p class="card-text small text-muted mb-3">
+                                                Advanced custom parameters
+                                            </p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                       type="radio" 
+                                                       name="scan_type" 
+                                                       id="custom" 
+                                                       value="custom">
+                                                <label class="form-check-label fw-bold text-info" for="custom">
+                                                    Select
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Parameters Section -->
+                        <div id="custom-parameters" class="mb-4" style="display: none;">
+                            <div class="custom-parameters-section">
+                                <h5 class="text-info mb-4">
+                                    <i class="fas fa-terminal me-2"></i>Custom Parameters Configuration
+                                </h5>
+                                
+                                <!-- Quick Presets -->
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">
+                                        <i class="fas fa-bolt me-2"></i>Quick Presets
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <button type="button" class="btn btn-outline-primary btn-sm w-100 preset-btn" 
+                                                    data-preset="-Tuning 1,2,3 -timeout 120">
+                                                <i class="fas fa-rocket me-2"></i>Fast CGI Scan
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm w-100 preset-btn" 
+                                                    data-preset="-Tuning 5,6,9 -timeout 180">
+                                                <i class="fas fa-eye me-2"></i>Info Disclosure
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <button type="button" class="btn btn-outline-dark btn-sm w-100 preset-btn" 
+                                                    data-preset="-evasion 1,2,3 -timeout 300">
+                                                <i class="fas fa-user-secret me-2"></i>Stealth Mode
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <button type="button" class="btn btn-outline-danger btn-sm w-100 preset-btn" 
+                                                    data-preset="-Tuning 7,8 -mutate 1,2">
+                                                <i class="fas fa-key me-2"></i>Auth Bypass
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Manual Parameters -->
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">
+                                        <i class="fas fa-keyboard me-2"></i>Manual Parameters
+                                    </h6>
+                                    <textarea class="form-control font-monospace" 
+                                              id="custom_params" 
+                                              name="custom_params" 
+                                              rows="4" 
+                                              placeholder="Enter custom Nikto parameters here...&#10;Example: -Tuning 1,2,3,4 -timeout 120 -useragent 'Custom Scanner'"></textarea>
+                                    <div class="form-text">
+                                        <div class="code-example mt-2">
+                                            <strong>Parameter Examples:</strong><br>
+                                            <code>-Tuning 1,2,3,4</code> → Specific vulnerability categories<br>
+                                            <code>-timeout 120</code> → Custom timeout (seconds)<br>
+                                            <code>-evasion 1,2,3</code> → IDS evasion techniques<br>
+                                            <code>-useragent "Custom"</code> → Custom user agent string
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Tuning Categories -->
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">
+                                        <i class="fas fa-sliders-h me-2"></i>Vulnerability Categories (Tuning)
+                                    </h6>
+                                    <div class="tuning-grid">
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="1" id="tuning1">
+                                            <label class="form-check-label small" for="tuning1">
+                                                <strong>1:</strong> File Upload
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="2" id="tuning2">
+                                            <label class="form-check-label small" for="tuning2">
+                                                <strong>2:</strong> Misconfiguration
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="3" id="tuning3">
+                                            <label class="form-check-label small" for="tuning3">
+                                                <strong>3:</strong> Info Disclosure
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="4" id="tuning4">
+                                            <label class="form-check-label small" for="tuning4">
+                                                <strong>4:</strong> Injection (XSS/Script)
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="5" id="tuning5">
+                                            <label class="form-check-label small" for="tuning5">
+                                                <strong>5:</strong> Remote File Retrieval
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="6" id="tuning6">
+                                            <label class="form-check-label small" for="tuning6">
+                                                <strong>6:</strong> Denial of Service
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="7" id="tuning7">
+                                            <label class="form-check-label small" for="tuning7">
+                                                <strong>7:</strong> Remote File Execute
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="8" id="tuning8">
+                                            <label class="form-check-label small" for="tuning8">
+                                                <strong>8:</strong> Command Execute
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="9" id="tuning9">
+                                            <label class="form-check-label small" for="tuning9">
+                                                <strong>9:</strong> SQL Injection
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="a" id="tuninga">
+                                            <label class="form-check-label small" for="tuninga">
+                                                <strong>a:</strong> Authentication Bypass
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="b" id="tuningb">
+                                            <label class="form-check-label small" for="tuningb">
+                                                <strong>b:</strong> Software Identification
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-custom">
+                                            <input class="form-check-input tuning-check" type="checkbox" value="x" id="tuningx">
+                                            <label class="form-check-label small" for="tuningx">
+                                                <strong>x:</strong> All Tests (Comprehensive)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg px-5 py-3">
+                                <i class="fas fa-play me-2"></i>Start Vulnerability Scan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Info Card -->
+            <div class="card mt-4 border-0 shadow-sm" data-aos="fade-up" data-aos-delay="100">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-primary">
+                        <i class="fas fa-info-circle me-2"></i>About NIKTO Scanner
+                    </h5>
+                    <p class="card-text">
+                        NIKTO is a comprehensive web vulnerability scanner that performs detailed assessments of web servers, 
+                        identifying security issues, misconfigurations, and potential attack vectors.
+                    </p>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6 class="text-success">Scan Capabilities:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>Outdated server software</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Dangerous files & programs</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Server misconfigurations</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info">Security Checks:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-shield-alt text-info me-2"></i>Default files & directories</li>
+                                <li><i class="fas fa-shield-alt text-info me-2"></i>Information disclosure</li>
+                                <li><i class="fas fa-shield-alt text-info me-2"></i>Version-specific problems</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Spinning Shield Loading Animation -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-container">
+        <div class="shield-loader">
+            <div class="inner-ring"></div>
+            <div class="scan-line"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+        </div>
+        
+        <div class="loading-title">Vulnerability Scan in Progress</div>
+        <div class="loading-subtitle" id="loadingSubtitle">Analyzing web server for security vulnerabilities</div>
+        <div class="loading-details" id="loadingDetails">
+            Scanning for misconfigurations and potential attack vectors<span class="loading-dots"></span>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-bar"></div>
+        </div>
+        <div class="progress-text" id="progressText">Initializing vulnerability scan...</div>
+        
+        <div class="status-indicator">
+            <div class="status-icon"></div>
+            <span id="statusText">NIKTO Scanner Active</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Loading Animation Controller for NIKTO
+const LoadingController = {
+    overlay: null,
+    progressText: null,
+    statusText: null,
+    loadingDetails: null,
+    progressMessages: [
+        "Initializing vulnerability scan...",
+        "Connecting to target server...",
+        "Analyzing server headers...",
+        "Scanning for dangerous files...",
+        "Checking for misconfigurations...",
+        "Testing for authentication bypass...",
+        "Detecting software versions...",
+        "Compiling vulnerability report..."
+    ],
+    statusMessages: [
+        "NIKTO Scanner Active",
+        "Server Connection",
+        "Header Analysis",
+        "File Discovery",
+        "Config Testing",
+        "Auth Testing",
+        "Version Detection",
+        "Report Generation"
+    ],
+    currentMessageIndex: 0,
+    messageInterval: null,
+
+    init() {
+        this.overlay = document.getElementById('loadingOverlay');
+        this.progressText = document.getElementById('progressText');
+        this.statusText = document.getElementById('statusText');
+        this.loadingDetails = document.getElementById('loadingDetails');
+    },
+
+    show() {
+        if (!this.overlay) this.init();
+        
+        this.overlay.classList.add('active');
+        this.currentMessageIndex = 0;
+        this.startMessageRotation();
+        
+        // Disable scrolling
+        document.body.style.overflow = 'hidden';
+    },
+
+    hide() {
+        if (!this.overlay) return;
+        
+        this.overlay.classList.remove('active');
+        this.stopMessageRotation();
+        
+        // Re-enable scrolling
+        document.body.style.overflow = '';
+    },
+
+    startMessageRotation() {
+        this.updateMessages();
+        
+        this.messageInterval = setInterval(() => {
+            this.currentMessageIndex = (this.currentMessageIndex + 1) % this.progressMessages.length;
+            this.updateMessages();
+        }, 2500);
+    },
+
+    stopMessageRotation() {
+        if (this.messageInterval) {
+            clearInterval(this.messageInterval);
+            this.messageInterval = null;
+        }
+    },
+
+    updateMessages() {
+        if (this.progressText) {
+            this.progressText.textContent = this.progressMessages[this.currentMessageIndex];
+        }
+        if (this.statusText) {
+            this.statusText.textContent = this.statusMessages[this.currentMessageIndex];
+        }
+    },
+
+    setCustomMessage(progress, status, details) {
+        if (this.progressText && progress) {
+            this.progressText.textContent = progress;
+        }
+        if (this.statusText && status) {
+            this.statusText.textContent = status;
+        }
+        if (this.loadingDetails && details) {
+            this.loadingDetails.innerHTML = details + '<span class="loading-dots"></span>';
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Loading Controller
+    LoadingController.init();
+
+    // Element selections
+    const scanTypeRadios = document.querySelectorAll('input[name="scan_type"]');
+    const customParametersDiv = document.getElementById('custom-parameters');
+    const optionCards = document.querySelectorAll('.option-card');
+    const presetButtons = document.querySelectorAll('.preset-btn');
+    const customParamsTextarea = document.getElementById('custom_params');
+    const tuningChecks = document.querySelectorAll('.tuning-check');
+    const form = document.getElementById('nikto-scan-form');
+    
+    // Initialize
+    updateCardSelection();
+    toggleCustomParameters();
+    
+    // Scan type change handlers
+    scanTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            updateCardSelection();
+            toggleCustomParameters();
+        });
+    });
+    
+    // Option card click handlers
+    optionCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const scanType = this.getAttribute('data-scan-type');
+            const radio = document.getElementById(scanType);
+            if (radio) {
+                radio.checked = true;
+                updateCardSelection();
+                toggleCustomParameters();
+            }
+        });
+    });
+    
+    // Preset button handlers
+    presetButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const preset = this.getAttribute('data-preset');
+            customParamsTextarea.value = preset;
+            
+            // Visual feedback
+            presetButtons.forEach(btn => {
+                btn.classList.remove('active', 'btn-primary');
+                btn.classList.add('btn-outline-primary');
+            });
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('btn-primary', 'active');
+        });
+    });
+    
+    // Tuning checkboxes handler
+    tuningChecks.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateTuningParameters();
+        });
+    });
+    
+    // Form submission handler
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        } else {
+            // Show enhanced loading animation
+            LoadingController.show();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // Functions
+    function updateCardSelection() {
+        optionCards.forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        const checkedRadio = document.querySelector('input[name="scan_type"]:checked');
+        if (checkedRadio) {
+            const scanType = checkedRadio.value;
+            const selectedCard = document.querySelector(`.option-card[data-scan-type="${scanType}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+        }
+    }
+    
+    function toggleCustomParameters() {
+        const isCustom = document.getElementById('custom').checked;
+        if (isCustom) {
+            customParametersDiv.style.display = 'block';
+        } else {
+            customParametersDiv.style.display = 'none';
+        }
+    }
+    
+    function updateTuningParameters() {
+        const checkedValues = Array.from(tuningChecks)
+            .filter(cb => cb.checked && cb.value !== 'x')
+            .map(cb => cb.value);
+        
+        // Check if 'x' (all tests) is selected
+        const allTestsChecked = document.getElementById('tuningx').checked;
+        
+        if (allTestsChecked) {
+            // If 'x' is selected, uncheck others and use 'x'
+            tuningChecks.forEach(cb => {
+                if (cb.value !== 'x') cb.checked = false;
+            });
+            updateCustomParams('-Tuning x');
+        } else if (checkedValues.length > 0) {
+            // Use selected specific values
+            updateCustomParams(`-Tuning ${checkedValues.join(',')}`);
+        }
+    }
+    
+    function updateCustomParams(tuningParam) {
+        const currentParams = customParamsTextarea.value;
+        
+        // Replace existing tuning or add new one
+        if (currentParams.includes('-Tuning')) {
+            customParamsTextarea.value = currentParams.replace(/-Tuning\s+[\d,a-zA-Z]+/, tuningParam);
+        } else {
+            customParamsTextarea.value = `${tuningParam} ${currentParams}`.trim();
+        }
+    }
+    
+    // Handle 'x' checkbox special behavior
+    document.getElementById('tuningx').addEventListener('change', function() {
+        if (this.checked) {
+            // Uncheck all other tuning options
+            tuningChecks.forEach(cb => {
+                if (cb.value !== 'x') cb.checked = false;
+            });
+        }
+        updateTuningParameters();
+    });
+    
+    // Prevent 'x' from being unchecked when other options are selected
+    tuningChecks.forEach(checkbox => {
+        if (checkbox.value !== 'x') {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('tuningx').checked = false;
+                }
+            });
+        }
+    });
+});
+
+// Global functions for easy access
+function showLoadingAnimation() {
+    LoadingController.show();
+}
+
+function hideLoadingAnimation() {
+    LoadingController.hide();
+}
+
+function updateLoadingMessage(progress, status, details) {
+    LoadingController.setCustomMessage(progress, status, details);
+}
+</script>
+{% endblock %}

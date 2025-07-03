@@ -1,0 +1,44 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies + NMAP + NIKTO
+RUN apt-get update && apt-get install -y \
+    gcc g++ libpq-dev curl wget git sqlite3 \
+    nmap ncat ndiff \
+    perl libnet-ssleay-perl openssl libauthen-pam-perl \
+    libpam-runtime libio-pty-perl apt-show-versions \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Nikto dari GitHub
+RUN git clone https://github.com/sullo/nikto /opt/nikto \
+    && ln -s /opt/nikto/program/nikto.pl /usr/local/bin/nikto \
+    && chmod +x /opt/nikto/program/nikto.pl
+
+# Copy requirements.txt
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install gunicorn
+
+# Copy scanner_project
+COPY scanner_project/ /app/scanner_project/
+COPY manage.py /app/manage.py
+COPY . .
+
+# Set environment dengan BOTH TOOLS
+ENV PYTHONPATH=/app
+ENV DJANGO_SETTINGS_MODULE=scanner_project.settings
+ENV NMAP_PATH=/usr/bin/nmap
+ENV NIKTO_PATH=/opt/nikto/program/nikto.pl
+
+# Create directories
+RUN mkdir -p /app/media /app/static /app/logs /app/scan_results
+
+# Test both tools installation
+RUN nmap --version
+RUN nikto -Version
+
+EXPOSE 8000
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

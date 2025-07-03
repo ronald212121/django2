@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Vulnerability Scanner{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- Profile Information -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="profile-avatar mb-3">
+                        {% if profile.avatar %}
+                            <img src="{{ profile.avatar.url }}" alt="Avatar" 
+                                 class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid var(--primary-color);">
+                        {% else %}
+                            <div class="avatar-placeholder rounded-circle mx-auto d-flex align-items-center justify-content-center"
+                                 style="width: 120px; height: 120px; background: var(--primary-color); color: white; font-size: 3rem;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h4 class="text-primary mb-1">{{ profile.display_name }}</h4>
+                    <p class="text-muted mb-2">{{ user.email }}</p>
+                    
+                    {% if profile.location %}
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            {{ profile.location }}
+                        </p>
+                    {% endif %}
+                    
+                    <div class="profile-stats mt-4">
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="stat-item">
+                                    <h5 class="text-primary mb-0">{{ profile.total_scans }}</h5>
+                                    <small class="text-muted">Scan</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-item">
+                                    <h5 class="text-warning mb-0">{{ profile.vulnerabilities_found }}</h5>
+                                    <small class="text-muted">Issues</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-item">
+                                    <h5 class="{% if profile.is_verified %}text-success{% else %}text-secondary{% endif %} mb-0">
+                                        {% if profile.is_verified %}<i class="fas fa-check-circle"></i>{% else %}<i class="fas fa-clock"></i>{% endif %}
+                                    </h5>
+                                    <small class="text-muted">Status</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if profile.last_scan_date %}
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                Scan terakhir: {{ profile.last_scan_date|timesince }} yang lalu
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Account Security -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Keamanan Akun
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="security-item d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-1">Email Verification</h6>
+                            <small class="text-muted">Status verifikasi email</small>
+                        </div>
+                        <div>
+                            {% if user.emailaddress_set.first.verified %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>Verified
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-exclamation me-1"></i>Pending
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="security-item d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-1">Password</h6>
+                            <small class="text-muted">Terakhir diubah</small>
+                        </div>
+                        <div>
+                            <a href="{% url 'account_change_password' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-key me-1"></i>Ubah
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="security-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">Social Accounts</h6>
+                            <small class="text-muted">Akun terhubung</small>
+                        </div>
+                        <div>
+                            <a href="{% url 'socialaccount_connections' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-link me-1"></i>Kelola
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Form -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-edit me-2"></i>
+                        Edit Profile
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- Personal Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-user me-2"></i>
+                                    Informasi Personal
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">Nama Depan</label>
+                                {{ form.first_name }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Nama Belakang</label>
+                                {{ form.last_name }}
+                            </div>
+                            
+                            <div class="col-md-8 mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                                {{ form.email }}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.phone_number.id_for_label }}" class="form-label">Nomor Telepon</label>
+                                {{ form.phone_number }}
+                            </div>
+                        </div>
+
+                        <!-- Profile Details -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Detail Profile
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.location.id_for_label }}" class="form-label">Lokasi</label>
+                                {{ form.location }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.birth_date.id_for_label }}" class="form-label">Tanggal Lahir</label>
+                                {{ form.birth_date }}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.bio.id_for_label }}" class="form-label">Bio</label>
+                                {{ form.bio }}
+                            </div>
+                        </div>
+
+                        <!-- Avatar Upload -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-camera me-2"></i>
+                                    Foto Profile
+                                </h6>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.avatar.id_for_label }}" class="form-label">Upload Avatar</label>
+                                <div class="upload-area border rounded p-4 text-center">
+                                    {{ form.avatar }}
+                                    <div class="mt-2">
+                                        <i class="fas fa-cloud-upload-alt text-muted" style="font-size: 2rem;"></i>
+                                        <p class="text-muted mt-2 mb-0">
+                                            Klik untuk upload atau drag & drop<br>
+                                            <small>Format: JPG, PNG (Max: 2MB)</small>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i>
+                                        Kembali
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>
+                                        Simpan Perubahan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Danger Zone -->
+            <div class="card mt-4" style="border-color: #dc3545;">
+                <div class="card-header" style="background: rgba(220, 53, 69, 0.1); border-bottom-color: #dc3545;">
+                    <h6 class="mb-0 text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Danger Zone
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="text-danger mb-1">Hapus Akun</h6>
+                            <p class="text-muted small mb-0">
+                                Aksi ini akan menghapus akun dan semua data Anda secara permanen. 
+                                Tindakan ini tidak dapat dibatalkan.
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                <i class="fas fa-trash me-2"></i>
+                                Hapus Akun
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: var(--card-bg); border-color: var(--border-color);">
+            <div class="modal-header border-bottom" style="border-color: var(--border-color);">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Konfirmasi Hapus Akun
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">
+                    Apakah Anda yakin ingin menghapus akun ini? Semua data termasuk:
+                </p>
+                <ul class="text-muted">
+                    <li>Riwayat scan dan hasil</li>
+                    <li>Informasi profile</li>
+                    <li>Preferensi dan pengaturan</li>
+                </ul>
+                <p class="text-danger small">
+                    <strong>Peringatan:</strong> Aksi ini tidak dapat dibatalkan!
+                </p>
+            </div>
+            <div class="modal-footer border-top" style="border-color: var(--border-color);">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Batal
+                </button>
+                <button type="button" class="btn btn-danger">
+                    <i class="fas fa-trash me-2"></i>
+                    Ya, Hapus Akun
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.upload-area {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-area:hover {
+    border-color: var(--primary-color) !important;
+    background: rgba(0, 212, 170, 0.05);
+}
+
+.security-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.security-item:last-child {
+    border-bottom: none;
+}
+
+.stat-item {
+    padding: 0.5rem 0;
+}
+
+.profile-avatar {
+    position: relative;
+}
+
+.profile-avatar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 50%;
+    transform: translateX(50%);
+    width: 20px;
+    height: 20px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    border: 3px solid var(--card-bg);
+}
+
+@media (max-width: 768px) {
+    .profile-stats .row {
+        text-align: center;
+    }
+    
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .d-flex.justify-content-between .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Image preview
+document.getElementById('{{ form.avatar.id_for_label }}').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // You can add image preview functionality here
+            console.log('Image selected:', file.name);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Drag and drop for avatar upload
+const uploadArea = document.querySelector('.upload-area');
+const fileInput = document.getElementById('{{ form.avatar.id_for_label }}');
+
+uploadArea.addEventListener('click', () => {
+    fileInput.click();
+});
+
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = 'var(--primary-color)';
+    uploadArea.style.background = 'rgba(0, 212, 170, 0.05)';
+});
+
+uploadArea.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '';
+    uploadArea.style.background = '';
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '';
+    uploadArea.style.background = '';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        // Trigger change event
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+    }
+});
+</script>
+{% endblock %}

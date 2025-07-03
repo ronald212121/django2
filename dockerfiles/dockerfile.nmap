@@ -1,0 +1,30 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies dan Nmap
+RUN apt-get update && apt-get install -y \
+    nmap ncat ndiff curl wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements.txt yang sama dari root
+COPY requirements.txt .
+
+# Install Python dependencies (sama seperti container lain)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy nmap_scanner dan core
+COPY nmap_scanner/ /app/nmap_scanner/
+COPY core/ /app/core/
+
+# Set environment
+ENV PYTHONPATH=/app
+ENV NMAP_PATH=/usr/bin/nmap
+
+# Create results directory
+RUN mkdir -p /app/results
+
+# Test Nmap installation
+RUN nmap --version
+
+CMD ["python", "-c", "print('Nmap Scanner Ready'); import time; time.sleep(3600)"]

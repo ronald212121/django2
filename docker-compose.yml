@@ -1,0 +1,189 @@
+
+
+services:
+  # ===== CONTAINER UNTUK FOLDER scanner_project/ =====
+  django:
+    build:
+      context: .
+      dockerfile: dockerfiles/dockerfile.scanner
+    container_name: django
+    ports:
+      - "0.0.0.0:8080:8000"
+    volumes:
+      - ./scanner_project:/app/scanner_project
+      - ./core:/app/core
+      - ./nmap_scanner:/app/nmap_scanner
+      - ./nikto_scanner:/app/nikto_scanner
+      - ./manage.py:/app/manage.py
+      - ./media:/app/media
+      - ./static:/app/static
+      - ./scan_results:/app/scan_results
+    environment:
+      - DEBUG=1
+      - DJANGO_SETTINGS_MODULE=scanner_project.settings
+      - DATABASE_URL=postgresql://scanner_user:scanner_pass@database:5432/scanner_db
+    depends_on:
+      - database
+      - redis
+    networks:
+      - scanner_network
+    restart: unless-stopped
+
+  # ===== CONTAINER UNTUK FOLDER core/ =====
+  scanner_core:
+    build:
+      context: .
+      dockerfile: dockerfiles/dockerfile.core
+    container_name: scanner_core
+    ports:
+      - "0.0.0.0:8001:8000"
+    volumes:
+      - ./core:/app/core
+      - ./scanner_project:/app/scanner_project
+      - ./nmap_scanner:/app/nmap_scanner
+      - ./nikto_scanner:/app/nikto_scanner
+      - ./manage.py:/app/manage.py
+      - ./media:/app/media
+      - ./static:/app/static
+    environment:
+      - DEBUG=1
+      - DJANGO_SETTINGS_MODULE=scanner_project.settings
+      - DATABASE_URL=postgresql://scanner_user:scanner_pass@database:5432/scanner_db
+    depends_on:
+      - database
+    networks:
+      - scanner_network
+    restart: unless-stopped
+
+  # ===== CONTAINER UNTUK FOLDER nikto_scanner/ =====
+  scanner_nikto:
+    build:
+      context: .
+      dockerfile: dockerfiles/dockerfile.nikto
+    container_name: scanner_nikto
+    volumes:
+      - ./nikto_scanner:/app/nikto_scanner
+      - ./core:/app/core
+      - ./scan_results:/app/results
+    environment:
+      - SCANNER_TYPE=nikto
+      - CORE_API_URL=http://scanner_core:8001
+      - NIKTO_PATH=/opt/nikto/program/nikto.pl
+      - PYTHONPATH=/app
+    depends_on:
+      - scanner_core
+    networks:
+      - scanner_network
+    restart: unless-stopped
+
+  # ===== CONTAINER UNTUK FOLDER nmap_scanner/ =====
+  scanner_nmap:
+    build:
+      context: .
+      dockerfile: dockerfiles/dockerfile.nmap
+    container_name: scanner_nmap
+    volumes:
+      - ./nmap_scanner:/app/nmap_scanner
+      - ./core:/app/core
+      - ./scan_results:/app/results
+    environment:
+      - SCANNER_TYPE=nmap
+      - CORE_API_URL=http://scanner_core:8001
+      - NMAP_PATH=/usr/bin/nmap
+      - PYTHONPATH=/app
+    depends_on:
+      - scanner_core
+    networks:
+      - scanner_network
+    restart: unless-stopped
+
+  # ===== CONTAINER UNTUK FOLDER scan_history/ =====
+  scanner_history:
+    build:
+      context: .
+      dockerfile: dockerfiles/dockerfile.history
+    container_name: scanner_history
+    ports:
+      - "0.0.0.0:8002:8000"
+    volumes:
+      - ./scan_history:/app/scan_history
+      - ./core:/app/core
+      - ./scan_results:/app/results
+    environment:
+      - CORE_API_URL=http://scanner_core:8001
+      - DATABASE_URL=sqlite:///scan_history.db
+      - PYTHONPATH=/app
+    depends_on:
+      - scanner_core
+    networks:
+      - scanner_network
+    restart: unless-stopped
+
+  # ===== CONTAINER UNTUK FOLDER media/ =====
+  media_server:
+    build:
+      context: .
+      dockerfile: dockerfiles/dockerfile.media
+    container_name: media_server
+    ports:
+      - "0.0.0.0:8003:80"
+    volumes:
+      - ./media:/usr/share/nginx/html/media
+    networks:
+      - scanner_network
+    restart: unless-stopped
+
+  # ===== CONTAINER UNTUK FOLDER static/ =====
+  static_server:
+    image: nginx:alpine
+    container_name: static_server
+    ports:
+      - "0.0.0.0:8004:80"
+    volumes:
+      - ./static:/usr/share/nginx/html/static
+      - ./nginx/static.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - scanner_network
+    restart: unless-stopped
+
+  # ===== DATABASE (PostgreSQL) =====
+  database:
+    image: postgres:13-alpine
+    container_name: scanner_db
+    environment:
+      - POSTGRES_DB=scanner_db
+      - POSTGRES_USER=scanner_user
+      - POSTGRES_PASSWORD=scanner_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db_backups:/backups
+    ports:
+      - "5433:5432"
+    networks:
+      - scanner_network
+    restart: unless-stopped
+
+  # ===== REDIS (Caching & Task Queue) =====
+  redis:
+    image: redis:7-alpine
+    container_name: scanner_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - scanner_network
+    restart: unless-stopped
+
+# ===== NETWORKS =====
+networks:
+  scanner_network:
+    driver: bridge
+
+# ===== VOLUMES =====
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

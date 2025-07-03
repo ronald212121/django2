@@ -1,0 +1,241 @@
+from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import json
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    bio = models.TextField(max_length=500, blank=True)
+    location = models.CharField(max_length=30, blank=True)
+    birth_date = models.DateField(null=True, blank=True)
+    phone_number = models.CharField(max_length=15, blank=True)
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Scan statistics
+    total_scans = models.IntegerField(default=0)
+    vulnerabilities_found = models.IntegerField(default=0)
+    last_scan_date = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.user.username}'s Profile"
+    
+    @property
+    def display_name(self):
+        if self.user.first_name and self.user.last_name:
+            return f"{self.user.first_name} {self.user.last_name}"
+        return self.user.username
+    
+    @property
+    def avatar_url(self):
+        if self.avatar:
+            return self.avatar.url
+        return '/static/images/default-avatar.png'
+
+# Signal untuk otomatis membuat profile ketika user baru dibuat
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    if hasattr(instance, 'profile'):
+        instance.profile.save()
+    else:
+        UserProfile.objects.create(user=instance)
+
+# Model untuk menyimpan hasil scan
+class ScanHistory(models.Model):
+    SCAN_TYPES = [
+        ('nmap', 'NMAP Scan'),
+        ('nikto', 'NIKTO Scan'),
+        ('combined', 'Combined Scan'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='scans')
+    target = models.CharField(max_length=255)
+    scan_type = models.CharField(max_length=20, choices=SCAN_TYPES)
+    results = models.TextField()
+    vulnerabilities_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_completed = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.scan_type} - {self.target}"
+
+# Model ScanResult untuk compatibility dengan scanner yang sudah ada
+class ScanResult(models.Model):
+    TOOL_CHOICES = (
+        ('nmap', 'NMAP'),
+        ('nikto', 'NIKTO'),
+    )
+    
+    SEVERITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+        ('info', 'Info'),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='scan_results')
+    target = models.CharField(max_length=255)
+    tool = models.CharField(max_length=10, choices=TOOL_CHOICES)
+    scan_type = models.CharField(max_length=50)
+    result = models.TextField()
+    recommendation = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Statistik tingkat kerentanan
+    low_count = models.IntegerField(default=0)
+    medium_count = models.IntegerField(default=0)
+    high_count = models.IntegerField(default=0)
+    critical_count = models.IntegerField(default=0)
+    info_count = models.IntegerField(default=0)
+    
+    def __str__(self):
+        return f"{self.tool} scan on {self.target} - {self.created_at}"
+        
+    def get_total_vulnerabilities(self):
+        """
+        Get total ACTUAL vulnerabilities (excluding info findings)
+        Info-level findings are not counted as vulnerabilities
+        """
+        return self.low_count + self.medium_count + self.high_count + self.critical_count
+    
+    def get_total_findings(self):
+        """
+        Get total findings including info-level findings
+        """
+        return self.low_count + self.medium_count + self.high_count + self.critical_count + self.info_count
+        
+    def get_result_dict(self):
+        try:
+            return json.loads(self.result)
+        except:
+            return {}
+    
+    # UPDATED: Use new industry standard scoring system
+    def get_security_score(self):
+        """
+        Calculate security score using new industry standard system
+        """
+        # Try new comprehensive scoring first
+        try:
+            from core.scoring import get_detailed_security_analysis
+            analysis = get_detailed_security_analysis(self)
+            return analysis.get('security_score', 0)
+        except Exception as e:
+            print(f"New scoring system error: {e}")
+            # Fallback to basic scoring
+            from core.scoring import calculate_security_score
+            return calculate_security_score(self)
+    
+    def get_detailed_analysis(self):
+        """
+        Get comprehensive analysis using new industry standard system
+        """
+        try:
+            from core.scoring import get_detailed_security_analysis
+            return get_detailed_security_analysis(self)
+        except Exception as e:
+            print(f"Detailed analysis error: {e}")
+            # Return basic analysis as fallback
+            return {
+                'security_score': self.get_basic_security_score(),
+                'risk_level': 'UNKNOWN',
+                'error': str(e)
+            }
+    
+    def get_basic_security_score(self):
+        """
+        Fallback basic scoring method
+        """
+        penalty = 0
+        penalty += self.critical_count * 40
+        penalty += self.high_count * 25
+        penalty += self.medium_count * 12
+        penalty += self.low_count * 5
+        # Info gets no penalty
+        
+        return max(0, min(100, 100 - penalty))
+    
+    def get_security_rating(self):
+        """Get security rating text"""
+        score = self.get_security_score()
+        from core.scoring import get_security_rating
+        return get_security_rating(score)
+    
+    def get_score_color(self):
+        """Get color class for score display"""
+        score = self.get_security_score()
+        from core.scoring import get_score_color
+        return get_score_color(score)
+    
+    def get_risk_level(self):
+        """Get NIST risk level"""
+        score = self.get_security_score()
+        from core.scoring import get_risk_level
+        return get_risk_level(score)
+    
+    def get_severity_breakdown(self):
+        """Get breakdown of vulnerabilities by severity"""
+        return {
+            'critical': self.critical_count,
+            'high': self.high_count,
+            'medium': self.medium_count,
+            'low': self.low_count,
+            'info': self.info_count,
+            'total_vulnerabilities': self.get_total_vulnerabilities(),
+            'total_findings': self.get_total_findings()
+        }
+    
+    def get_security_summary(self):
+        """Get comprehensive security summary using new system"""
+        try:
+            detailed_analysis = self.get_detailed_analysis()
+            score = detailed_analysis.get('security_score', 0)
+            
+            return {
+                'score': score,
+                'rating': self.get_security_rating(),
+                'color': self.get_score_color(),
+                'risk_level': detailed_analysis.get('risk_level', 'UNKNOWN'),
+                'total_vulnerabilities': self.get_total_vulnerabilities(),
+                'total_findings': self.get_total_findings(),
+                'severity_breakdown': self.get_severity_breakdown(),
+                'detailed_analysis': detailed_analysis,
+                'scan_info': {
+                    'target': self.target,
+                    'tool': self.tool,
+                    'scan_type': self.scan_type,
+                    'date': self.created_at
+                }
+            }
+        except Exception as e:
+            print(f"Security summary error: {e}")
+            # Fallback to basic summary
+            score = self.get_basic_security_score()
+            return {
+                'score': score,
+                'rating': self.get_security_rating(),
+                'color': self.get_score_color(),
+                'risk_level': self.get_risk_level(),
+                'total_vulnerabilities': self.get_total_vulnerabilities(),
+                'total_findings': self.get_total_findings(),
+                'severity_breakdown': self.get_severity_breakdown(),
+                'error': 'Using fallback scoring',
+                'scan_info': {
+                    'target': self.target,
+                    'tool': self.tool,
+                    'scan_type': self.scan_type,
+                    'date': self.created_at
+                }
+            }

@@ -1,0 +1,536 @@
+# UPDATED: nmap_scanner/views.py with new scoring system integration
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from .utils import run_nmap_scan
+import cohere
+import json
+import os
+from django.conf import settings
+import shutil
+
+COHERE_API_KEY = "l5txUpFu1GUbXnR3fXLbbTt6wRchJi5c9A8SYDZd"
+
+nmap_path = shutil.which('nmap')
+
+def generate_enhanced_cohere_recommendation_nmap(scan_result, target, scan_type):
+    """UPDATED: Generate contextual recommendations with new scoring system integration"""
+    
+    # Get enhanced analysis from new scoring system
+    try:
+        detailed_analysis = scan_result.get_detailed_analysis()
+        security_score = detailed_analysis.get('security_score', 0)
+        risk_level = detailed_analysis.get('risk_level', 'UNKNOWN')
+        cvss_metrics = detailed_analysis.get('cvss_metrics', {})
+        compliance_assessment = detailed_analysis.get('compliance_assessment', {})
+    except Exception as e:
+        print(f"New scoring system unavailable: {e}")
+        # Fallback to basic scoring
+        detailed_analysis = None
+        security_score = scan_result.get_security_score()
+        risk_level = scan_result.get_risk_level()
+        cvss_metrics = {}
+        compliance_assessment = {}
+    
+    # Parse scan results
+    try:
+        result_data = json.loads(scan_result.result)
+    except:
+        result_data = {}
+    
+    # Check if scan was successful
+    if 'error' in result_data:
+        # Scan failed - provide troubleshooting recommendations
+        prompt = f"""
+**NMAP SCAN FAILURE ANALYSIS**
+
+The {scan_type} NMAP scan on target {target} failed with the following error: {result_data['error']}
+
+Industry Standard Analysis Framework Applied:
+- NIST Cybersecurity Framework diagnostic approach
+- Network security assessment best practices
+- Systematic troubleshooting methodology
+
+Please provide comprehensive analysis including:
+
+1. **Root Cause Analysis:**
+   - Technical reasons why the scan failed
+   - Network infrastructure considerations
+   - Security control implications
+
+2. **Troubleshooting Strategy:**
+   - Step-by-step diagnostic procedures
+   - Alternative scanning methodologies
+   - Network reconnaissance alternatives
+
+3. **Security Considerations:**
+   - What scan failure indicates about security posture
+   - Potential security controls blocking reconnaissance
+   - Risk assessment of inaccessible systems
+
+4. **Next Steps & Alternatives:**
+   - Alternative security assessment approaches
+   - Manual verification techniques
+   - Compliance framework requirements
+
+Keep the response practical, actionable, and aligned with industry security standards.
+"""
+    else:
+        # Scan successful - provide security recommendations with enhanced context
+        if detailed_analysis:
+            # Use new scoring system data
+            vuln_summary = f"""
+**INDUSTRY STANDARD NMAP SECURITY ASSESSMENT**
+
+Target: {target}
+Scan Type: {scan_type} (Enhanced with Industry Standard Scoring)
+Security Score: {security_score}/100 (CVSS v3.1 + OWASP + NIST Framework)
+Risk Level: {risk_level} (NIST RMF Classification)
+
+**ENHANCED VULNERABILITY METRICS:**
+- Critical Vulnerabilities: {scan_result.critical_count}
+- High Vulnerabilities: {scan_result.high_count}
+- Medium Vulnerabilities: {scan_result.medium_count}
+- Low Vulnerabilities: {scan_result.low_count}
+- Info Items: {scan_result.info_count}
+- Total Security Issues: {scan_result.get_total_vulnerabilities()}
+
+**CVSS v3.1 ANALYSIS:**
+- Average CVSS Score: {cvss_metrics.get('average_cvss', 'N/A')}
+- Critical CVSS Vulnerabilities: {cvss_metrics.get('critical_vulnerabilities', 0)}
+- Vulnerability Assessment Count: {cvss_metrics.get('vulnerability_count', 0)}
+
+**COMPLIANCE FRAMEWORK STATUS:**
+- ISO/IEC 27001: {compliance_assessment.get('ISO27001', 'Not Assessed')}
+- SOC 2: {compliance_assessment.get('SOC2', 'Not Assessed')}
+- PCI DSS: {compliance_assessment.get('PCI_DSS', 'Not Assessed')}
+- NIST CSF: {compliance_assessment.get('NIST_CSF', 'Not Assessed')}
+
+Key Technical Findings: {str(result_data)[:600]}...
+"""
+        else:
+            # Fallback to basic summary
+            vuln_summary = f"""
+**NMAP SECURITY ASSESSMENT RESULTS**
+
+Target: {target}
+Scan Type: {scan_type}
+Security Score: {security_score}/100
+Risk Level: {risk_level}
+- Critical Vulnerabilities: {scan_result.critical_count}
+- High Vulnerabilities: {scan_result.high_count}
+- Medium Vulnerabilities: {scan_result.medium_count}
+- Low Vulnerabilities: {scan_result.low_count}
+- Info Items: {scan_result.info_count}
+- Total Vulnerabilities Found: {scan_result.get_total_vulnerabilities()}
+
+Key Findings: {str(result_data)[:600]}...
+"""
+        
+        if scan_result.get_total_vulnerabilities() > 0:
+            # High-risk findings detected
+            prompt = f"""
+{vuln_summary}
+
+**CRITICAL SECURITY ANALYSIS REQUIRED**
+
+Based on this comprehensive NMAP security assessment using industry standards, multiple vulnerabilities have been identified requiring immediate attention.
+
+Please provide expert security analysis including:
+
+1. **Critical Risk Assessment (CVSS v3.1 Priority):**
+   - Analysis of the most critical security issues found
+   - CVSS scoring implications and business impact
+   - Immediate threat landscape assessment
+
+2. **Remediation Strategy (NIST Framework Aligned):**
+   - Specific remediation steps for each vulnerability category
+   - Priority matrix for fixing vulnerabilities (Critical → High → Medium → Low)
+   - Resource allocation and timeline recommendations
+
+3. **Security Hardening Plan (Industry Best Practices):**
+   - Network infrastructure hardening recommendations
+   - Service configuration improvements
+   - Access control enhancements
+
+4. **Compliance & Monitoring (Framework Requirements):**
+   - Compliance framework alignment steps
+   - Continuous monitoring implementation
+   - Follow-up assessment schedule
+
+5. **Strategic Security Improvements:**
+   - Long-term security architecture recommendations
+   - Security tool deployment strategy
+   - Risk management framework integration
+
+Focus on actionable security advice that can be immediately implemented by network administrators and security teams, aligned with industry standards and compliance requirements.
+"""
+        else:
+            # No vulnerabilities or specific scan types
+            if scan_type == 'port':
+                prompt = f"""
+{vuln_summary}
+
+**NETWORK PORT SECURITY ANALYSIS**
+
+This NMAP port scan discovered network services but no specific vulnerabilities were flagged by the assessment engine.
+
+Based on this network reconnaissance using industry-standard methodology, please provide:
+
+1. **Service Security Assessment:**
+   - Analysis of the open ports and services discovered
+   - Security implications of each identified service
+   - Attack surface evaluation per NIST guidelines
+
+2. **Network Hardening Strategy:**
+   - Specific recommendations for securing each exposed service
+   - Port filtering and firewall configuration guidance
+   - Service banner hardening techniques
+
+3. **Advanced Security Testing:**
+   - Additional security testing recommendations for discovered services
+   - Vulnerability assessment next steps
+   - Penetration testing methodology suggestions
+
+4. **Monitoring & Compliance:**
+   - Network monitoring best practices for identified services
+   - Compliance framework requirements (PCI DSS, SOX, etc.)
+   - Incident response considerations
+
+5. **Risk Management:**
+   - Risk assessment of the discovered attack surface
+   - Business continuity considerations
+   - Security control effectiveness evaluation
+
+Focus on practical network security advice based on the specific services and configurations discovered during the scan.
+"""
+            elif scan_type == 'os':
+                prompt = f"""
+{vuln_summary}
+
+**OPERATING SYSTEM SECURITY FINGERPRINT ANALYSIS**
+
+This NMAP OS detection scan identified system characteristics with enhanced security scoring analysis.
+
+Based on this system fingerprinting using industry-standard techniques, please provide:
+
+1. **OS Security Posture Assessment:**
+   - Analysis of the detected operating system and version
+   - Known security implications of the identified OS fingerprint
+   - Patch level and security update recommendations
+
+2. **System Hardening Strategy (CIS Benchmarks Aligned):**
+   - OS-specific security hardening recommendations
+   - Configuration baseline improvements
+   - Service minimization strategies
+
+3. **Vulnerability Management:**
+   - OS-specific vulnerability assessment recommendations
+   - Patch management strategy development
+   - Security update prioritization
+
+4. **Compliance & Standards:**
+   - Operating system compliance requirements
+   - Industry standard configuration benchmarks
+   - Security framework alignment (NIST, ISO, CIS)
+
+5. **Advanced Security Measures:**
+   - Endpoint detection and response recommendations
+   - System monitoring and logging improvements
+   - Incident response preparation
+
+Focus on practical OS security advice based on the specific system characteristics and security profile identified.
+"""
+            else:
+                prompt = f"""
+{vuln_summary}
+
+**COMPREHENSIVE NETWORK SECURITY ASSESSMENT**
+
+This {scan_type} NMAP scan completed successfully with enhanced industry-standard analysis, providing baseline security insights.
+
+Based on this network security assessment using CVSS v3.1, OWASP, and NIST methodologies, please provide:
+
+1. **Security Posture Analysis:**
+   - Current security baseline assessment
+   - Network security maturity evaluation
+   - Risk profile characterization
+
+2. **Enhanced Security Testing Strategy:**
+   - Comprehensive vulnerability assessment recommendations
+   - Application-layer security testing suggestions
+   - Advanced persistent threat detection methods
+
+3. **Security Architecture Improvements:**
+   - Network segmentation recommendations
+   - Defense-in-depth strategy implementation
+   - Zero-trust architecture considerations
+
+4. **Continuous Security Operations:**
+   - Ongoing security monitoring implementation
+   - Security metrics and KPI development
+   - Incident response capability enhancement
+
+5. **Compliance & Governance:**
+   - Security framework alignment recommendations
+   - Policy and procedure development
+   - Risk management integration
+
+Keep recommendations practical, strategic, and aligned with industry security standards and best practices.
+"""
+    
+    return prompt
+
+@login_required
+def nmap_scan_view(request):
+    """UPDATED: NMAP scan view with new scoring system integration"""
+    if request.method == 'POST':
+        target = request.POST.get('target')
+        scan_type = request.POST.get('scan_type')
+
+        print(f"DEBUG: Starting NMAP scan with NEW SCORING - Target: {target}, Type: {scan_type}")
+
+        try:
+            # Run NMAP scan
+            scan_result = run_nmap_scan(target, scan_type, request.user)
+            
+            print(f"DEBUG: NMAP scan completed - ID: {scan_result.id}")
+            print(f"DEBUG: Scan result preview: {scan_result.result[:200]}...")
+            print(f"DEBUG: Vulnerabilities - C:{scan_result.critical_count}, H:{scan_result.high_count}, M:{scan_result.medium_count}, L:{scan_result.low_count}")
+
+            # UPDATED: Get enhanced analysis from new scoring system
+            try:
+                detailed_analysis = scan_result.get_detailed_analysis()
+                security_score = detailed_analysis.get('security_score', 0)
+                risk_level = detailed_analysis.get('risk_level', 'UNKNOWN')
+                print(f"DEBUG: NEW SCORING - Score: {security_score}, Risk: {risk_level}")
+                
+                # Log additional analysis data if available
+                if 'cvss_metrics' in detailed_analysis:
+                    cvss_data = detailed_analysis['cvss_metrics']
+                    print(f"DEBUG: CVSS Metrics - Avg: {cvss_data.get('average_cvss', 0)}, Critical: {cvss_data.get('critical_vulnerabilities', 0)}")
+                
+                if 'compliance_assessment' in detailed_analysis:
+                    compliance = detailed_analysis['compliance_assessment']
+                    print(f"DEBUG: Compliance Status - ISO27001: {compliance.get('ISO27001', 'N/A')}")
+                
+            except Exception as e:
+                print(f"DEBUG: New scoring system error: {e}, falling back to basic scoring")
+                security_score = scan_result.get_security_score()
+                risk_level = scan_result.get_risk_level()
+
+            # UPDATED: Generate enhanced prompt for Cohere AI with new analysis
+            enhanced_prompt = generate_enhanced_cohere_recommendation_nmap(scan_result, target, scan_type)
+            
+            print(f"DEBUG: Generated enhanced prompt preview: {enhanced_prompt[:300]}...")
+
+            # Get recommendations from Cohere AI with enhanced prompt
+            try:
+                co = cohere.Client(COHERE_API_KEY)
+                response = co.generate(
+                    prompt=enhanced_prompt,
+                    max_tokens=1500,  # Increased for more comprehensive analysis
+                    temperature=0.2,  # Slightly higher for more detailed responses
+                    truncate='NONE'
+                )
+
+                # Save enhanced recommendation to the scan result
+                scan_result.recommendation = response.generations[0].text
+                scan_result.save()
+                
+                print(f"DEBUG: Enhanced AI recommendation saved for NMAP scan")
+                
+            except Exception as cohere_error:
+                print(f"DEBUG: Cohere error: {cohere_error}")
+                # Generate fallback recommendation with new analysis
+                fallback_recommendation = generate_nmap_fallback_recommendation(scan_result, target, scan_type)
+                scan_result.recommendation = fallback_recommendation
+                scan_result.save()
+                messages.warning(request, "AI service temporarily unavailable. Using enhanced backup recommendations.")
+
+            # UPDATED: Enhanced success messages with new scoring context
+            total_vulns = scan_result.get_total_vulnerabilities()
+            
+            if total_vulns > 0:
+                messages.warning(request, 
+                    f"⚠️ NMAP scan completed! Found {total_vulns} security issues. "
+                    f"Security Score: {security_score}/100, Risk Level: {risk_level}. "
+                    f"Review detailed analysis and recommendations.")
+            elif security_score >= 85:
+                messages.success(request, 
+                    f"✅ NMAP scan completed! Excellent security posture detected. "
+                    f"Security Score: {security_score}/100, Risk Level: {risk_level}. "
+                    f"Continue maintaining current security practices.")
+            else:
+                messages.info(request, 
+                    f"📊 NMAP scan completed successfully. "
+                    f"Security Score: {security_score}/100, Risk Level: {risk_level}. "
+                    f"Review recommendations for potential improvements.")
+
+            return redirect('scan_result', scan_id=scan_result.id)
+
+        except Exception as e:
+            messages.error(request, f"Error during NMAP scan: {str(e)}")
+            print(f"ERROR: NMAP scan error: {str(e)}")
+
+    # UPDATED: Enhanced form context with new features
+    context = {
+        'scan_types': [
+            ('port', 'Port Scan with Security Analysis - Enhanced CVSS scoring (3-5 minutes)'),
+            ('vuln', 'Vulnerability Scan - Comprehensive OWASP + NIST assessment (8-12 minutes)'),
+            ('os', 'OS Detection with Security Profiling - CIS benchmark analysis (5-8 minutes)'),
+            ('script', 'Script Scan with Advanced Analysis - Multi-framework scoring (10-15 minutes)'),
+            ('aggressive', 'Aggressive Scan with Full Assessment - Complete industry standard analysis (15-20 minutes)')
+        ],
+        'nmap_available': nmap_path is not None,
+        'nmap_path': nmap_path,
+        'enhancement_info': {
+            'enabled': True,
+            'features': [
+                'Traditional NMAP network scanning',
+                'Enhanced vulnerability detection and classification',
+                'Industry Standard Security Scoring (CVSS v3.1 + OWASP + NIST)',
+                'NIST Risk Management Framework (RMF) integration',
+                'Compliance framework assessment (ISO, SOC2, PCI DSS)',
+                'Enhanced AI-powered security recommendations',
+                'Risk-based vulnerability prioritization',
+                'Security control effectiveness assessment'
+            ]
+        }
+    }
+    
+    return render(request, 'nmap_scanner/scan_form.html', context)
+
+def generate_nmap_fallback_recommendation(scan_result, target, scan_type):
+    """UPDATED: Generate enhanced fallback recommendations for NMAP scans"""
+    
+    try:
+        detailed_analysis = scan_result.get_detailed_analysis()
+        security_score = detailed_analysis.get('security_score', 0)
+        risk_level = detailed_analysis.get('risk_level', 'UNKNOWN')
+    except:
+        security_score = scan_result.get_security_score()
+        risk_level = scan_result.get_risk_level()
+    
+    total_vulns = scan_result.get_total_vulnerabilities()
+    
+    # Create detailed vulnerability breakdown
+    vuln_details = []
+    if scan_result.critical_count > 0:
+        vuln_details.append(f"🔴 Critical: {scan_result.critical_count}")
+    if scan_result.high_count > 0:
+        vuln_details.append(f"🟠 High: {scan_result.high_count}")
+    if scan_result.medium_count > 0:
+        vuln_details.append(f"🟡 Medium: {scan_result.medium_count}")
+    if scan_result.low_count > 0:
+        vuln_details.append(f"🟢 Low: {scan_result.low_count}")
+    if scan_result.info_count > 0:
+        vuln_details.append(f"🔵 Info: {scan_result.info_count}")
+    
+    vuln_summary = " | ".join(vuln_details) if vuln_details else "No vulnerabilities detected"
+    
+    if total_vulns > 5 or scan_result.critical_count > 0:
+        # High-risk scenario
+        return f"""
+🚨 **CRITICAL NETWORK SECURITY ASSESSMENT - IMMEDIATE ACTION REQUIRED**
+
+📊 NMAP Security Assessment Summary (Industry Standards):
+• Target: {target}
+• Scan Type: {scan_type} (Enhanced with Industry Standard Scoring)
+• Security Score: {security_score}/100
+• NIST Risk Level: {risk_level}
+• Total Security Issues: {total_vulns} ({vuln_summary})
+
+⚡ **IMMEDIATE NETWORK SECURITY RESPONSE (Next 24-48 Hours):**
+1. **Critical Service Hardening:** Secure or disable any critical vulnerabilities immediately
+2. **Access Control Review:** Implement emergency access restrictions for vulnerable services
+3. **Network Segmentation:** Isolate affected systems from critical infrastructure
+4. **Monitoring Enhancement:** Deploy additional network monitoring for vulnerable services
+
+🔧 **NETWORK HARDENING STRATEGY (Next 1-2 Weeks):**
+• **Service Configuration:** Harden all identified vulnerable network services
+• **Firewall Rules:** Implement strict firewall policies to limit exposure
+• **Port Management:** Close unnecessary ports and restrict service access
+• **Update Management:** Apply security patches to all identified systems
+
+🛡️ **SECURITY ARCHITECTURE IMPROVEMENTS (Next Month):**
+• **Defense in Depth:** Implement layered security controls
+• **Network Monitoring:** Deploy comprehensive network security monitoring (SIEM)
+• **Vulnerability Management:** Establish regular vulnerability assessment cycles
+• **Incident Response:** Develop network security incident response procedures
+
+📊 **COMPLIANCE & GOVERNANCE (Ongoing):**
+• **Framework Alignment:** Align network security with NIST Cybersecurity Framework
+• **Policy Development:** Create network security policies and procedures
+• **Regular Assessment:** Schedule quarterly network security assessments
+• **Documentation:** Maintain comprehensive network security documentation
+
+This network assessment indicates significant security concerns requiring immediate attention per industry security standards.
+        """
+    elif total_vulns > 0:
+        # Medium-risk scenario
+        return f"""
+⚠️ **NETWORK SECURITY IMPROVEMENT PLAN - INDUSTRY STANDARDS ALIGNMENT**
+
+📊 NMAP Security Assessment Summary (Industry Standards):
+• Target: {target}
+• Scan Type: {scan_type} (Enhanced with Industry Standard Scoring)
+• Security Score: {security_score}/100
+• NIST Risk Level: {risk_level}
+• Security Issues: {vuln_summary}
+
+🔧 **NETWORK SECURITY IMPROVEMENTS (Next 2-4 Weeks):**
+1. **Service Hardening:** Address identified vulnerable network services
+2. **Configuration Review:** Review and harden service configurations
+3. **Access Control:** Implement proper authentication and authorization
+4. **Monitoring:** Enhance network monitoring for identified services
+
+🛡️ **SECURITY BEST PRACTICES (Industry Aligned):**
+• **Regular Updates:** Keep all network services updated with latest patches
+• **Service Minimization:** Disable unnecessary network services
+• **Strong Authentication:** Implement strong authentication for all services
+• **Encryption:** Ensure all communications use strong encryption
+
+📊 **ONGOING SECURITY STRATEGY:**
+• **Regular Scans:** Schedule monthly network security assessments
+• **Compliance Monitoring:** Ensure alignment with relevant security frameworks
+• **Team Training:** Provide security awareness training for network administrators
+• **Documentation:** Maintain current network security documentation
+
+This assessment provides actionable recommendations for improving your network security posture to meet industry standards.
+        """
+    else:
+        # Low-risk or no vulnerabilities
+        return f"""
+✅ **EXCELLENT NETWORK SECURITY POSTURE - INDUSTRY STANDARDS MET**
+
+📊 NMAP Security Assessment Summary (Industry Standards):
+• Target: {target}
+• Scan Type: {scan_type} (Enhanced with Industry Standard Scoring)
+• Security Score: {security_score}/100
+• NIST Risk Level: {risk_level}
+• Assessment: Strong network security posture detected
+
+🏆 **OUTSTANDING NETWORK SECURITY ACHIEVEMENT:**
+Your network infrastructure demonstrates excellent security practices with minimal or no significant vulnerabilities detected.
+
+📋 **MAINTENANCE EXCELLENCE (Continue Current Practices):**
+1. **Current Security:** Maintain existing network security configurations
+2. **Regular Monitoring:** Continue regular network security assessments
+3. **Update Management:** Maintain current patch and update procedures
+4. **Documentation:** Keep security documentation current and comprehensive
+
+🎯 **ADVANCED SECURITY INITIATIVES:**
+• **Continuous Monitoring:** Consider implementing continuous network monitoring
+• **Advanced Threat Detection:** Explore advanced threat detection capabilities
+• **Security Automation:** Implement automated security response capabilities
+• **Compliance Enhancement:** Consider additional compliance framework alignment
+
+🔄 **ONGOING SECURITY STRATEGY:**
+• **Regular Assessment:** Schedule quarterly comprehensive network assessments
+• **Threat Intelligence:** Integrate threat intelligence for proactive defense
+• **Team Excellence:** Continue security training and skill development
+• **Innovation:** Stay current with emerging network security technologies
+
+Your network security implementation meets or exceeds industry standards. Continue these excellent practices while exploring advanced security capabilities.
+        """

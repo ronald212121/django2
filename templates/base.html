@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vulnerability Scanner{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <!-- AOS - Animate On Scroll -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
+    <!-- Dark Solid Theme Styles -->
+    <style>
+        :root {
+            --primary-color: #00d4aa;
+            --secondary-color: #6c757d;
+            --dark-bg: #2d3748;
+            --darker-bg: #1a202c;
+            --card-bg: #ffffff;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --text-dark: #212529;
+            --border-color: #4a5568;
+            --navbar-bg: #1a202c;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--card-bg);
+            color: var(--text-dark);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: var(--navbar-bg) !important;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .navbar-brand {
+            color: var(--primary-color) !important;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .navbar-brand i {
+            margin-right: 10px;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.85) !important;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.75rem 1rem !important;
+            border-radius: 8px;
+            margin: 0 0.25rem;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary-color) !important;
+            background: rgba(0, 212, 170, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: #00b894;
+            border-color: #00b894;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 170, 0.3);
+        }
+
+        .btn-outline-primary {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            background: transparent;
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid #dee2e6;
+            border-radius: 16px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1.5rem;
+            border-radius: 16px 16px 0 0 !important;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        .form-control {
+            background: var(--card-bg);
+            border: 1px solid #dee2e6;
+            color: var(--text-dark);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            background: var(--card-bg);
+            border-color: var(--primary-color);
+            color: var(--text-dark);
+            box-shadow: 0 0 0 0.2rem rgba(0, 212, 170, 0.25);
+        }
+
+        .alert {
+            border-radius: 12px;
+            border: none;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-success {
+            background: rgba(0, 212, 170, 0.1);
+            color: #00b894;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .alert-danger {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border-left: 4px solid #dc3545;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+        }
+
+        .dropdown-menu {
+            background: var(--card-bg);
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .dropdown-item {
+            color: var(--text-dark);
+            padding: 0.75rem 1.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(0, 212, 170, 0.1);
+            color: var(--primary-color);
+        }
+
+        .main-content {
+            min-height: calc(100vh - 80px);
+            padding-top: 80px;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, rgba(0, 212, 170, 0.1) 0%, rgba(0, 184, 148, 0.1) 100%);
+            border: 1px solid rgba(0, 212, 170, 0.2);
+        }
+
+        /* HERO SECTION - DARK SOLID BACKGROUND */
+        .hero-section {
+            background: var(--dark-bg);
+            min-height: 60vh;
+            display: flex;
+            align-items: center;
+            color: var(--text-primary);
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .hero-text {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .hero-stats {
+            margin-top: 2rem;
+        }
+
+        .hero-stats h3 {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .hero-stats small {
+            color: var(--text-secondary);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, rgba(0, 212, 170, 0.1) 0%, rgba(0, 184, 148, 0.1) 100%);
+            border: 2px solid rgba(0, 212, 170, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: var(--primary-color);
+            font-size: 2rem;
+        }
+
+        .social-login-btn {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            border: 2px solid #dee2e6;
+            background: var(--card-bg);
+            color: var(--text-dark);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+        }
+
+        .social-login-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            text-decoration: none;
+            transform: translateY(-2px);
+        }
+
+        .social-login-btn i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        .footer {
+            background: var(--navbar-bg);
+            color: white;
+        }
+
+        /* BUTTONS IN HERO SECTION */
+        .hero-section .btn {
+            margin: 0.5rem;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-radius: 8px;
+        }
+
+        .hero-section .btn-primary {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        .hero-section .btn-outline-primary {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            background: transparent;
+        }
+
+        .hero-section .btn-outline-primary:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* CONTENT SECTIONS */
+        .content-section {
+            background: var(--card-bg);
+            color: var(--text-dark);
+            padding: 4rem 0;
+        }
+
+        .section-title {
+            color: var(--text-dark);
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            color: var(--secondary-color);
+            margin-bottom: 3rem;
+        }
+
+        /* =============================================
+           TEXT VISIBILITY FIXES - MENGATASI MASALAH TEXT TIDAK TERLIHAT
+           ============================================= */
+
+        /* Fix untuk semua heading dan text */
+        h1, h2, h3, h4, h5, h6 {
+            color: #333 !important;
+            font-weight: 600;
+        }
+
+        p, span, div {
+            color: #666;
+        }
+
+        /* Card headers - pastikan terlihat */
+        .card-header h5,
+        .card-header h6,
+        .card-header .text-dark,
+        .card-title {
+            color: #333 !important;
+            font-weight: 600 !important;
+        }
+
+        /* Text utilities dengan warna yang jelas */
+        .text-dark {
+            color: #212529 !important;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        .text-primary {
+            color: #007bff !important;
+        }
+
+        .text-success {
+            color: #28a745 !important;
+        }
+
+        .text-warning {
+            color: #ffc107 !important;
+        }
+
+        .text-danger {
+            color: #dc3545 !important;
+        }
+
+        .text-info {
+            color: #17a2b8 !important;
+        }
+
+        /* Form labels */
+        .form-label {
+            color: #495057 !important;
+            font-weight: 500 !important;
+        }
+
+        /* Section titles dan labels khusus */
+        .section-title,
+        .quick-actions-title,
+        .recent-activity-title,
+        .security-title,
+        .profile-section-title {
+            color: #333 !important;
+            font-weight: 600 !important;
+            margin-bottom: 1rem;
+        }
+
+        /* Badge styling */
+        .badge {
+            font-weight: 500;
+            font-size: 0.875em;
+        }
+
+        /* Button text */
+        .btn {
+            font-weight: 500;
+        }
+
+        /* Dropdown menu fix */
+        .dropdown-menu {
+            color: #212529;
+        }
+
+        .dropdown-item {
+            color: #212529 !important;
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item:focus {
+            color: #16181b !important;
+            background-color: #f8f9fa;
+        }
+
+        /* Alert components */
+        .alert {
+            color: #333;
+        }
+
+        .alert h4,
+        .alert h5,
+        .alert h6 {
+            color: inherit !important;
+        }
+
+        /* Modal text */
+        .modal-title {
+            color: #333 !important;
+        }
+
+        .modal-body {
+            color: #666;
+        }
+
+        /* Table text */
+        .table {
+            color: #333;
+        }
+
+        .table th {
+            color: #333 !important;
+            font-weight: 600;
+        }
+
+        .table td {
+            color: #666;
+        }
+
+        /* Breadcrumb */
+        .breadcrumb-item {
+            color: #6c757d;
+        }
+
+        .breadcrumb-item.active {
+            color: #495057;
+        }
+
+        /* List group */
+        .list-group-item {
+            color: #333;
+        }
+
+        /* Tab content */
+        .tab-content {
+            color: #333;
+        }
+
+        .nav-tabs .nav-link {
+            color: #495057;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        /* Override untuk framework CSS yang mungkin conflict */
+        * {
+            -webkit-text-fill-color: unset !important;
+        }
+
+        /* Specific fixes untuk vulnerability scanner */
+        .vulnerability-scanner h1,
+        .vulnerability-scanner h2,
+        .vulnerability-scanner h3,
+        .vulnerability-scanner h4,
+        .vulnerability-scanner h5,
+        .vulnerability-scanner h6 {
+            color: #333 !important;
+        }
+
+        .vulnerability-scanner .card-header {
+            color: #333 !important;
+        }
+
+        .vulnerability-scanner .section-header {
+            color: #333 !important;
+            font-weight: 600 !important;
+        }
+
+        /* Fix khusus untuk dashboard dan profile */
+        .quick-actions h4,
+        .recent-activity h4,
+        .quick-actions .section-title,
+        .recent-activity .section-title,
+        .card-body h4,
+        .card-body h5,
+        .card-body h6,
+        .card-body .title {
+            color: #333 !important;
+        }
+
+        /* Security section title */
+        .security-title {
+            color: #333 !important;
+            font-weight: 600 !important;
+        }
+
+        /* Profile edit section titles */
+        .profile-info-title,
+        .profile-details-title,
+        .avatar-section-title {
+            color: #333 !important;
+            font-weight: 600 !important;
+        }
+
+        /* Hero section tetap menggunakan warna asli (putih) */
+        .hero-section h1,
+        .hero-section h2,
+        .hero-section h3,
+        .hero-section h4,
+        .hero-section h5,
+        .hero-section h6 {
+            color: var(--text-primary) !important;
+        }
+
+        .hero-section p {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Navbar tetap menggunakan warna asli */
+        .navbar .nav-link {
+            color: rgba(255,255,255,0.85) !important;
+        }
+
+        .navbar-brand {
+            color: var(--primary-color) !important;
+        }
+
+        /* Footer tetap menggunakan warna asli */
+        .footer,
+        .footer h5,
+        .footer p,
+        .footer li {
+            color: white !important;
+        }
+
+        /* Dark mode compatibility */
+        @media (prefers-color-scheme: dark) {
+            .quick-actions-title,
+            .recent-activity-title,
+            .section-title,
+            .card-title,
+            .card-header h5,
+            .card-header h6,
+            .profile-section-title,
+            .security-section-title {
+                color: #fff !important;
+            }
+            
+            .card-header {
+                background-color: #343a40;
+                border-bottom: 1px solid #454d55;
+            }
+            
+            .form-label {
+                color: #fff !important;
+            }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .navbar-nav {
+                text-align: center;
+                padding-top: 1rem;
+            }
+            
+            .card-body {
+                padding: 1.5rem;
+            }
+
+            .hero-section .btn {
+                display: block;
+                width: 100%;
+                margin: 0.5rem 0;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="fas fa-shield-alt"></i>
+                Vulnerability Scanner
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">
+                                <i class="fas fa-home me-1"></i> Home
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                Tools
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                <li><a class="dropdown-item" href="{% url 'nmap_scan' %}">
+                                    <i class="fas fa-search me-2"></i>NMAP Scanner
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'nikto_scan' %}">
+                                    <i class="fas fa-bug me-2"></i>NIKTO Scanner
+                                </a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'scan_history' %}active{% endif %}" 
+                               href="{% url 'scan_history' %}">
+                                <i class="fas fa-history me-1"></i>Riwayat
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}" 
+                           href="{% url 'about' %}">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}" 
+                           href="{% url 'contact' %}">Contact Us</a>
+                    </li>
+                </ul>
+                
+                <!-- User Authentication Menu -->
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                {% if user.profile.avatar %}
+                                    <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="user-avatar me-2">
+                                {% else %}
+                                    <i class="fas fa-user-circle me-2" style="font-size: 1.5rem;"></i>
+                                {% endif %}
+                                {{ user.profile.display_name|default:user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'dashboard' %}">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'profile' %}">
+                                    <i class="fas fa-user-edit me-2"></i>Edit Profile
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'custom_logout' %}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'account_login' %}">
+                                <i class="fas fa-sign-in-alt me-1"></i>Login
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'account_signup' %}">
+                                <i class="fas fa-user-plus me-1"></i>Daftar
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="main-content">
+        {% if messages %}
+            <div class="container mt-4">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Vulnerability Scanner</h5>
+                    <p>Tool canggih untuk memindai kerentanan pada sistem dan jaringan Anda.</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'home' %}" class="text-white-50">Home</a></li>
+                        {% if user.is_authenticated %}
+                            <li><a href="{% url 'nmap_scan' %}" class="text-white-50">NMAP Scanner</a></li>
+                            <li><a href="{% url 'nikto_scan' %}" class="text-white-50">NIKTO Scanner</a></li>
+                            <li><a href="{% url 'scan_history' %}" class="text-white-50">Riwayat Scan</a></li>
+                        {% else %}
+                            <li><a href="{% url 'account_login' %}" class="text-white-50">Login</a></li>
+                            <li><a href="{% url 'account_signup' %}" class="text-white-50">Daftar</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5>Contact</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-envelope me-2"></i> m.pitoliputra15@gmail.com</li>
+                        <li><i class="fas fa-phone me-2"></i> +62 812 3456 7890</li>
+                        <li><i class="fas fa-map-marker-alt me-2"></i> Bandung, Indonesia</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <p class="mb-0">&copy; 2025 Vulnerability Scanner. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AOS - Animate On Scroll -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- Custom JS -->
+    <script src="{% static 'js/main.js' %}"></script>
+    
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

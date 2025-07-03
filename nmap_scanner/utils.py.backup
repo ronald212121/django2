@@ -1,0 +1,301 @@
+import nmap
+import json
+from core.models import ScanResult
+
+def run_nmap_scan(target, scan_type, user):
+    nm = nmap.PortScanner()
+    
+    print(f"Starting {scan_type} scan for {target}...")
+    
+    try:
+        if scan_type == 'os':
+            # OS detection scan - FIXED: No sudo, use alternative methods
+            print(f"Running OS detection scan (non-root)...")
+            # Use aggressive service detection + OS hints without requiring root
+            nm.scan(hosts=target, arguments='-sV -A --version-intensity 9 -T4')
+            
+        elif scan_type == 'port':
+            # Port scan - Enhanced port range
+            print(f"Running port scan...")
+            nm.scan(hosts=target, arguments='-sT -T4 -p 1-10000')  # TCP connect scan, no root needed
+            
+        elif scan_type == 'vuln':
+            # Vulnerability scan - FIXED: Remove sudo requirement
+            print(f"Running vulnerability scan with timeouts (no-root)...")
+            
+            try:
+                # Vulnerability scan with TCP connect (no root needed)
+                args = '-sT --script vuln --script-timeout=60s --host-timeout=120s -T4 -p 80,443,8080,8443,21,22,23,25,53,110,143,993,995'
+                print(f"Executing: nmap {args} {target}")
+                nm.scan(hosts=target, arguments=args)  # REMOVED: sudo=True
+                print("Vulnerability scan completed successfully")
+            except Exception as vuln_error:
+                print(f"Vuln scan failed: {vuln_error}")
+                try:
+                    # Fallback - specific common vulns only
+                    args = '-sT --script http-vuln-* --script-timeout=30s --host-timeout=60s -T4 -p 80,443,8080'
+                    print(f"Fallback executing: nmap {args} {target}")
+                    nm.scan(hosts=target, arguments=args)  # REMOVED: sudo=True
+                    print("Fallback vulnerability scan completed")
+                except Exception as fallback_error:
+                    print(f"Fallback failed: {fallback_error}")
+                    # Last resort - just service detection
+                    print("Using service detection as last resort")
+                    nm.scan(hosts=target, arguments='-sT -sV --version-intensity=5 -T4 -p 80,443,8080')
+            
+        else:  # comprehensive
+            # Comprehensive scan - FIXED: No sudo
+            print(f"Running comprehensive scan (no-root)...")
+            # Use TCP connect + service detection + safe scripts
+            nm.scan(hosts=target, arguments='-sT -sV -sC --script=default,vuln --script-timeout=90s --host-timeout=180s -T4')  # REMOVED: sudo=True
+        
+        print(f"Scan execution completed, processing results...")
+        
+        # Check if any hosts were found
+        all_hosts = nm.all_hosts()
+        print(f"Hosts found: {all_hosts}")
+        
+        if not all_hosts:
+            # No hosts found, but let's check if nm has scan info
+            scan_info = nm.scaninfo()
+            print(f"Scan info: {scan_info}")
+            
+            result = {
+                'error': 'No hosts found in scan results',
+                'scan_info': scan_info,
+                'target_attempted': target,
+                'scan_type': scan_type,
+                'suggestion': 'Target may be unreachable or behind firewall'
+            }
+        else:
+            # Use the first host found (usually the target)
+            target_host = all_hosts[0]
+            print(f"Processing results for host: {target_host}")
+            
+            if scan_type == 'os':
+                result = {
+                    'scan_successful': True,
+                    'host': target_host,
+                    'osmatch': nm[target_host].get('osmatch', []),
+                    'portused': nm[target_host].get('portused', []),
+                    'status': nm[target_host].get('status', {}),
+                    'addresses': nm[target_host].get('addresses', {}),
+                    'hostnames': nm[target_host].get('hostnames', []),
+                    'vendor': nm[target_host].get('vendor', {}),  # Service vendor info for OS hints
+                    'scan_method': 'service_fingerprinting'  # Indicate non-root method
+                }
+            elif scan_type == 'port':
+                tcp_ports = nm[target_host].get('tcp', {})
+                udp_ports = nm[target_host].get('udp', {})
+                result = {
+                    'scan_successful': True,
+                    'host': target_host,
+                    'tcp': tcp_ports,
+                    'udp': udp_ports,
+                    'status': nm[target_host].get('status', {}),
+                    'addresses': nm[target_host].get('addresses', {}),
+                    'hostnames': nm[target_host].get('hostnames', []),
+                    'open_ports': {
+                        'tcp': [port for port, info in tcp_ports.items() if info.get('state') == 'open'],
+                        'udp': [port for port, info in udp_ports.items() if info.get('state') == 'open']
+                    },
+                    'total_ports_scanned': len(tcp_ports) + len(udp_ports)
+                }
+            elif scan_type == 'vuln':
+                result = {
+                    'scan_successful': True,
+                    'host': target_host,
+                    'tcp': nm[target_host].get('tcp', {}),
+                    'udp': nm[target_host].get('udp', {}),
+                    'hostscript': nm[target_host].get('hostscript', []),
+                    'status': nm[target_host].get('status', {}),
+                    'addresses': nm[target_host].get('addresses', {}),
+                    'hostnames': nm[target_host].get('hostnames', []),
+                    'vulnerability_scan_completed': True,
+                    'scan_method': 'tcp_connect_vuln_scripts'
+                }
+            else:  # comprehensive
+                result = {
+                    'scan_successful': True,
+                    'host': target_host,
+                    'scan_method': 'comprehensive_tcp_connect',
+                    **nm[target_host]
+                }
+                
+    except Exception as e:
+        print(f"NMAP scan exception: {e}")
+        result = {
+            'error': str(e),
+            'scan_type': scan_type,
+            'target': target,
+            'error_details': 'Scan failed - timeout or execution error',
+            'suggestion': 'Try with a different scan type or check target availability'
+        }
+    
+    print(f"Starting vulnerability parsing...")
+    
+    # Count vulnerabilities by severity - ENHANCED
+    low, medium, high, critical, info = 0, 0, 0, 0, 0
+    
+    # Parse results to count vulnerabilities - enhanced for all scan types
+    if 'error' not in result and 'scan_successful' in result:
+        print(f"Parsing {scan_type} scan results for vulnerabilities...")
+        
+        # Check TCP ports for script results
+        if 'tcp' in result:
+            tcp_ports = result['tcp']
+            print(f"Checking {len(tcp_ports)} TCP ports for vulnerabilities...")
+            
+            for port_num, port_data in tcp_ports.items():
+                if isinstance(port_data, dict):
+                    # Count open ports as potential attack surface
+                    if port_data.get('state') == 'open':
+                        service_name = port_data.get('name', '').lower()
+                        
+                        # High-risk services
+                        if service_name in ['telnet', 'ftp', 'smtp', 'snmp', 'rsh', 'rlogin']:
+                            high += 1
+                            print(f"High-risk service found: {service_name} on port {port_num}")
+                        # Medium-risk services
+                        elif service_name in ['http', 'ssh', 'pop3', 'imap']:
+                            medium += 1
+                            print(f"Medium-risk service found: {service_name} on port {port_num}")
+                        # Low-risk services
+                        elif service_name in ['https', 'domain']:
+                            low += 1
+                            print(f"Low-risk service found: {service_name} on port {port_num}")
+                        else:
+                            info += 1
+                    
+                    # Check for script vulnerabilities
+                    if 'script' in port_data:
+                        scripts = port_data['script']
+                        print(f"Port {port_num} has {len(scripts)} scripts")
+                        
+                        for script_name, output in scripts.items():
+                            if isinstance(output, str):
+                                severity = classify_vulnerability_severity(script_name, output)
+                                if severity != 'none':
+                                    print(f"Vulnerability found in {script_name} - Severity: {severity}")
+                                    
+                                    if severity == 'critical':
+                                        critical += 1
+                                    elif severity == 'high':
+                                        high += 1
+                                    elif severity == 'medium':
+                                        medium += 1
+                                    elif severity == 'low':
+                                        low += 1
+                                    else:
+                                        info += 1
+        
+        # Check UDP ports for vulnerabilities
+        if 'udp' in result:
+            udp_ports = result['udp']
+            print(f"Checking {len(udp_ports)} UDP ports...")
+            
+            for port_num, port_data in udp_ports.items():
+                if isinstance(port_data, dict) and port_data.get('state') == 'open':
+                    service_name = port_data.get('name', '').lower()
+                    if service_name in ['snmp', 'tftp', 'ntp']:
+                        medium += 1
+                        print(f"UDP service found: {service_name} on port {port_num}")
+                    else:
+                        info += 1
+        
+        # Check hostscript results
+        if 'hostscript' in result:
+            hostscripts = result['hostscript']
+            print(f"Checking {len(hostscripts)} host scripts...")
+            
+            for script in hostscripts:
+                if isinstance(script, dict) and 'output' in script:
+                    script_name = script.get('id', '')
+                    output = script['output']
+                    severity = classify_vulnerability_severity(script_name, output)
+                    
+                    if severity != 'none':
+                        print(f"Host vulnerability found: {script_name} - Severity: {severity}")
+                        
+                        if severity == 'critical':
+                            critical += 1
+                        elif severity == 'high':
+                            high += 1
+                        elif severity == 'medium':
+                            medium += 1
+                        elif severity == 'low':
+                            low += 1
+                        else:
+                            info += 1
+        
+        print(f"Final vulnerability count - Critical: {critical}, High: {high}, Medium: {medium}, Low: {low}, Info: {info}")
+    
+    # Store the scan result
+    print(f"Saving scan result to database...")
+    scan_result = ScanResult(
+        user=user,
+        target=target,
+        tool='nmap',
+        scan_type=scan_type,
+        result=json.dumps(result, default=str, indent=2),
+        low_count=low,
+        medium_count=medium,
+        high_count=high,
+        critical_count=critical,
+        info_count=info
+    )
+    scan_result.save()
+    
+    print(f"Scan result saved for {target} - Type: {scan_type}, ID: {scan_result.id}")
+    return scan_result
+
+def classify_vulnerability_severity(script_name, output):
+    """Classify vulnerability severity based on script name and output"""
+    script_lower = script_name.lower()
+    output_lower = output.lower()
+    
+    # Critical vulnerabilities
+    critical_indicators = [
+        'ms17-010', 'eternal', 'wannacry', 'shellshock', 'heartbleed',
+        'remote code execution', 'buffer overflow', 'backdoor',
+        'cve-2017', 'cve-2019', 'cve-2020', 'cve-2021', 'cve-2022', 'cve-2023', 'cve-2024'
+    ]
+    
+    if any(indicator in script_lower or indicator in output_lower for indicator in critical_indicators):
+        return 'critical'
+    
+    # High vulnerabilities
+    high_indicators = [
+        'vuln', 'exploit', 'weakness', 'security', 'dangerous',
+        'authentication bypass', 'privilege escalation', 'injection',
+        'cross-site scripting', 'sql injection', 'directory traversal'
+    ]
+    
+    if any(indicator in script_lower or indicator in output_lower for indicator in high_indicators):
+        if 'vulnerable' in output_lower or 'exploit' in output_lower:
+            return 'high'
+    
+    # Medium vulnerabilities
+    medium_indicators = [
+        'information disclosure', 'enumeration', 'fingerprint',
+        'banner grabbing', 'service detection', 'brute force',
+        'weak', 'insecure', 'misconfiguration'
+    ]
+    
+    if any(indicator in script_lower or indicator in output_lower for indicator in medium_indicators):
+        return 'medium'
+    
+    # Low vulnerabilities
+    low_indicators = [
+        'trace', 'options', 'methods', 'headers', 'cookie',
+        'redirect', 'robots', 'sitemap'
+    ]
+    
+    if any(indicator in script_lower or indicator in output_lower for indicator in low_indicators):
+        return 'low'
+    
+    # Check for general vulnerability indicators
+    if ('vulnerable' in output_lower or 'cve-' in output_lower or 'exploit' in output_lower):
+        return 'info'
+    
+    return 'none'

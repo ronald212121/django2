@@ -1,0 +1,669 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contact Us - Vulnerability Scanner{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Team Photo Animation Styles */
+.team-photo-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease;
+}
+
+.team-photo-container:hover {
+    transform: scale(1.02);
+}
+
+.team-photo-background {
+    position: relative;
+    z-index: 1;
+}
+
+.team-photo {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: brightness(1.1) contrast(1.05);
+    transition: filter 0.3s ease;
+}
+
+.team-photo-container:hover .team-photo {
+    filter: brightness(1.2) contrast(1.1);
+}
+
+.animation-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Scanning Lines */
+.scan-line {
+    position: absolute;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent, #0d6efd, transparent);
+    opacity: 0.7;
+    animation: scanMove 4s ease-in-out infinite;
+}
+
+.scan-line-1 {
+    left: 20%;
+    animation-delay: 0s;
+}
+
+.scan-line-2 {
+    left: 80%;
+    animation-delay: 2s;
+}
+
+@keyframes scanMove {
+    0%, 100% { transform: translateX(-50px); opacity: 0; }
+    50% { transform: translateX(50px); opacity: 0.7; }
+}
+
+/* Floating Particles */
+.particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: #00d4aa;
+    border-radius: 50%;
+    opacity: 0.8;
+    animation: float 3s ease-in-out infinite;
+    box-shadow: 0 0 10px #00d4aa;
+}
+
+.particle-1 { top: 20%; left: 10%; animation-delay: 0s; }
+.particle-2 { top: 30%; right: 15%; animation-delay: 1s; }
+.particle-3 { bottom: 25%; left: 20%; animation-delay: 2s; }
+.particle-4 { bottom: 40%; right: 10%; animation-delay: 1.5s; }
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(180deg); }
+}
+
+/* Network Overlay SVG */
+.network-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.8;
+}
+
+/* Role Labels */
+.role-label {
+    position: absolute;
+    background: rgba(13, 110, 253, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: labelPulse 2s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.role-left {
+    bottom: 20px;
+    left: 50px;
+    background: rgba(139, 69, 19, 0.9);
+    animation-delay: 0s;
+}
+
+.role-center {
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(47, 47, 47, 0.9);
+    animation-delay: 1s;
+}
+
+.role-right {
+    bottom: 20px;
+    right: 50px;
+    background: rgba(139, 69, 19, 0.9);
+    animation-delay: 2s;
+}
+
+@keyframes labelPulse {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50% { transform: scale(1.05); opacity: 1; }
+}
+
+.role-icon {
+    font-size: 14px;
+    animation: iconSpin 4s linear infinite;
+}
+
+@keyframes iconSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Hover Effects */
+.team-photo-container:hover .particle {
+    animation-duration: 1.5s;
+    opacity: 1;
+}
+
+.team-photo-container:hover .scan-line {
+    animation-duration: 2s;
+    opacity: 1;
+}
+
+.team-photo-container:hover .role-label {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+.team-photo-container:hover .role-right {
+    transform: translateX(10px) scale(1.1);
+}
+
+.team-photo-container:hover .role-left {
+    transform: translateX(-10px) scale(1.1);
+}
+
+/* Contact Info Styles */
+.contact-info-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.contact-info-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-5px);
+}
+
+.contact-info-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(45deg, #0d6efd, #198754);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.2rem;
+    color: white;
+    box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+}
+
+.contact-form {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 2rem;
+}
+
+/* Social Media Buttons */
+.social-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-size: 1.2rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.social-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.social-btn.instagram {
+    background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
+    color: white;
+}
+
+.social-btn.instagram:hover {
+    background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
+    color: white;
+    filter: brightness(1.1);
+}
+
+.social-btn.github {
+    background: #333;
+    color: white;
+}
+
+.social-btn.github:hover {
+    background: #000;
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .role-label {
+        font-size: 10px;
+        padding: 6px 8px;
+    }
+    
+    .particle {
+        width: 4px;
+        height: 4px;
+    }
+    
+    .scan-line {
+        width: 1px;
+    }
+    
+    .team-photo-container {
+        max-width: 400px;
+    }
+    
+    .contact-info-item {
+        padding: 1rem;
+    }
+    
+    .contact-info-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .social-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center hero-content">
+            <div class="col-lg-6" data-aos="fade-right">
+                <h1 class="hero-title">Hubungi Kami</h1>
+                <p class="hero-text">Punya pertanyaan atau saran? Jangan ragu untuk menghubungi kami. Tim kami siap membantu Anda.</p>
+            </div>
+            <div class="col-lg-6 d-none d-lg-block text-center" data-aos="fade-left">
+                <!-- ANIMATED TEAM PHOTO -->
+                <div class="team-photo-container">
+                    <div class="team-photo-background">
+                        <img src="{% static 'img/team-photo.jpg' %}" alt="Tim Vulnerability Scanner" class="team-photo">
+                    </div>
+                    
+                    <div class="animation-overlay">
+                        <!-- Scanning lines -->
+                        <div class="scan-line scan-line-1"></div>
+                        <div class="scan-line scan-line-2"></div>
+                        
+                        <!-- Floating particles -->
+                        <div class="particle particle-1"></div>
+                        <div class="particle particle-2"></div>
+                        <div class="particle particle-3"></div>
+                        <div class="particle particle-4"></div>
+                        
+                        <!-- Network connections -->
+                        <svg class="network-overlay" viewBox="0 0 600 400">
+                            <defs>
+                                <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#0d6efd;stop-opacity:0.8" />
+                                    <stop offset="100%" style="stop-color:#198754;stop-opacity:0.8" />
+                                </linearGradient>
+                                <filter id="glow">
+                                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                    <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                                </filter>
+                            </defs>
+                            
+                            <!-- Connection lines between team members -->
+                            <line x1="150" y1="200" x2="300" y2="200" stroke="url(#lineGrad)" stroke-width="2" opacity="0.6" filter="url(#glow)">
+                                <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+                            </line>
+                            <line x1="300" y1="200" x2="450" y2="200" stroke="url(#lineGrad)" stroke-width="2" opacity="0.6" filter="url(#glow)">
+                                <animate attributeName="opacity" values="0.6;1;0.6" dur="2.5s" repeatCount="indefinite"/>
+                            </line>
+                            
+                            <!-- Tech nodes -->
+                            <circle cx="150" cy="150" r="8" fill="#0d6efd" opacity="0.8" filter="url(#glow)">
+                                <animate attributeName="r" values="8;12;8" dur="2s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="300" cy="130" r="8" fill="#198754" opacity="0.8" filter="url(#glow)">
+                                <animate attributeName="r" values="8;12;8" dur="1.8s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="450" cy="150" r="8" fill="#dc3545" opacity="0.8" filter="url(#glow)">
+                                <animate attributeName="r" values="8;12;8" dur="2.2s" repeatCount="indefinite"/>
+                            </circle>
+                            
+                            <!-- Moving data packets -->
+                            <circle r="3" fill="#00d4aa">
+                                <animateMotion dur="3s" repeatCount="indefinite">
+                                    <path d="M 150 200 L 300 200 L 450 200"/>
+                                </animateMotion>
+                            </circle>
+                        </svg>
+                        
+                        <!-- Role labels with animation -->
+                        <div class="role-label role-left">
+                            <span class="role-text">M Pitoli Putra</span>
+                            <div class="role-icon">💻</div>
+                        </div>
+                        <div class="role-label role-center">
+                            <span class="role-text">Ronald Sucipta</span>
+                            <div class="role-icon">💻</div>
+                        </div>
+                        <div class="role-label role-right">
+                            <span class="role-text">Syahla Serinda</span>
+                            <div class="role-icon">💻</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="row g-4">
+                    <!-- Contact Form -->
+                    <div class="col-lg-7" data-aos="fade-up">
+                        <div class="contact-form">
+                            <h3 class="mb-4">Kirim Pesan</h3>
+                            
+                            <div id="alert-placeholder"></div>
+                            
+                            <form id="contactForm" class="needs-validation" novalidate>
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Nama Lengkap</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                        <input type="text" class="form-control" id="name" name="name" placeholder="Masukkan nama lengkap Anda" required>
+                                        <div class="invalid-feedback">
+                                            Nama tidak boleh kosong.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                        <input type="email" class="form-control" id="email" name="email" placeholder="Masukkan alamat email Anda" required>
+                                        <div class="invalid-feedback">
+                                            Email tidak valid.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="subject" class="form-label">Subjek</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                                        <input type="text" class="form-control" id="subject" name="subject" placeholder="Subjek pesan Anda" required>
+                                        <div class="invalid-feedback">
+                                            Subjek tidak boleh kosong.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="message" class="form-label">Pesan</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                                        <textarea class="form-control" id="message" name="message" rows="5" placeholder="Tulis pesan Anda di sini..." required></textarea>
+                                        <div class="invalid-feedback">
+                                            Pesan tidak boleh kosong.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center mt-4">
+                                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                                        <i class="fas fa-paper-plane me-2"></i> Kirim Pesan
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Info -->
+                    <div class="col-lg-5" data-aos="fade-up" data-aos-delay="100">
+                        <div class="contact-info h-100">
+                            <h3 class="mb-4">Informasi Kontak</h3>
+                            
+                            <div class="contact-info-item">
+                                <div class="contact-info-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">Alamat</h5>
+                                    <p class="mb-0">Jl. Telekomunikasi No. 1, Terusan Buahbatu, Bojongsoang.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-info-item">
+                                <div class="contact-info-icon">
+                                    <i class="fas fa-phone-alt"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">Telepon</h5>
+                                    <p class="mb-0">+62 811 6692 522</p>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-info-item">
+                                <div class="contact-info-icon">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">Email</h5>
+                                    <p class="mb-0">m.pitoliputra15@gmail.com</p>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-info-item">
+                                <div class="contact-info-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">Jam Operasional</h5>
+                                    <p class="mb-0">Senin - Jumat: 08:00 - 17:00</p>
+                                    <p class="mb-0">Sabtu: 08:00 - 12:00</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <h5 class="mb-3">Ikuti Kami</h5>
+                                <div class="d-flex gap-3">
+                                    <a href="https://www.instagram.com/whitehat1_?igsh=azJ3bDh1ajNxMXE%3D&utm_source=qr" 
+                                       target="_blank" 
+                                       class="social-btn instagram" 
+                                       title="Follow us on Instagram">
+                                        <i class="fab fa-instagram"></i>
+                                    </a>
+                                    <a href="https://github.com/pitoli-programing-handal" 
+                                       target="_blank" 
+                                       class="social-btn github" 
+                                       title="Check our GitHub">
+                                        <i class="fab fa-github"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Map Section -->
+                <div class="card shadow-sm border-0 rounded-lg mt-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="card-body p-0">
+                        <div class="ratio ratio-16x9">
+                            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.8995003296394!2d107.62993451537474!3d-6.907002094989953!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e68e7c381e3c89f%3A0x5f4f1c2b84c1e60!2sJl.%20Telekomunikasi%20No.1%2C%20Terusan%20Buahbatu%2C%20Bojongsoang%2C%20Kabupaten%20Bandung%2C%20Jawa%20Barat!5e0!3m2!1sid!2sid!4v1640995200000!5m2!1sid!2sid" 
+                                    width="100%" 
+                                    height="450" 
+                                    style="border:0;" 
+                                    allowfullscreen="" 
+                                    loading="lazy" 
+                                    referrerpolicy="no-referrer-when-downgrade">
+                            </iframe>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- FAQ Section -->
+                <div class="card shadow-sm border-0 rounded-lg mt-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Pertanyaan Umum</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="faqAccordion">
+                            <!-- FAQ Item 1 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading1">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse1" aria-expanded="true" aria-controls="faqCollapse1">
+                                        Apa itu Vulnerability Scanner?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse1" class="accordion-collapse collapse show" aria-labelledby="faqHeading1" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        <p>Vulnerability Scanner adalah platform pemindaian keamanan yang mengintegrasikan dua tool utama NMAP dan NIKTO dengan analisis kecerdasan buatan untuk memberikan penilaian kerentanan yang komprehensif pada sistem dan jaringan Anda.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- FAQ Item 2 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading2">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse2" aria-expanded="false" aria-controls="faqCollapse2">
+                                        Apakah aman menggunakan platform ini?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse2" class="accordion-collapse collapse" aria-labelledby="faqHeading2" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        <p>Ya, platform ini didesain dengan memperhatikan keamanan. Semua pemindaian dilakukan dari server kami dan hasil analisis disimpan dengan aman. Namun, kami selalu menyarankan untuk menggunakan platform ini hanya pada sistem yang Anda miliki atau mendapatkan izin untuk melakukan pemindaian.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- FAQ Item 3 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading3">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse3" aria-expanded="false" aria-controls="faqCollapse3">
+                                        Apa saja fitur utama platform ini?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse3" class="accordion-collapse collapse" aria-labelledby="faqHeading3" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        <ul>
+                                            <li>Pemindaian dengan NMAP untuk deteksi OS, port, dan service</li>
+                                            <li>Pemindaian web server dengan NIKTO</li>
+                                            <li>Analisis kerentanan menggunakan Cohere AI</li>
+                                            <li>Visualisasi hasil pemindaian</li>
+                                            <li>Riwayat pemindaian</li>
+                                            <li>Laporan terperinci dan rekomendasi perbaikan</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- FAQ Item 4 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading4">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse4" aria-expanded="false" aria-controls="faqCollapse4">
+                                        Berapa lama waktu yang dibutuhkan untuk pemindaian?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse4" class="accordion-collapse collapse" aria-labelledby="faqHeading4" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        <p>Waktu pemindaian bervariasi tergantung pada jenis pemindaian dan ukuran target. Pemindaian port dasar mungkin membutuhkan waktu beberapa detik hingga menit, sementara pemindaian komprehensif untuk website yang kompleks bisa membutuhkan waktu hingga 30 menit atau lebih.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- FAQ Item 5 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading5">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse5" aria-expanded="false" aria-controls="faqCollapse5">
+                                        Bagaimana cara menghubungi tim dukungan?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse5" class="accordion-collapse collapse" aria-labelledby="faqHeading5" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        <p>Anda dapat menghubungi tim dukungan kami melalui formulir kontak di halaman ini, mengirim email ke m.pitoliputra15@gmail.com, atau menghubungi kami melalui telepon di +62 811 6692 522 selama jam operasional kami.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const contactForm = document.getElementById('contactForm');
+        
+        if (contactForm) {
+            contactForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Validate form
+                if (!contactForm.checkValidity()) {
+                    e.stopPropagation();
+                    contactForm.classList.add('was-validated');
+                    return;
+                }
+                
+                // Show loading spinner
+                showLoadingSpinner('Mengirim pesan...');
+                
+                // Simulate form submission (in real app, this would be an AJAX request)
+                setTimeout(function() {
+                    // Hide loading spinner
+                    hideLoadingSpinner();
+                    
+                    // Show success message
+                    showAlert('Pesan Anda telah berhasil dikirim! Tim kami akan menghubungi Anda segera.', 'success');
+                    
+                    // Reset form
+                    contactForm.reset();
+                    contactForm.classList.remove('was-validated');
+                }, 1500);
+            });
+        }
+    });
+</script>
+{% endblock %}

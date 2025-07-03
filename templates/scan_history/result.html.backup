@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Hasil Pemindaian{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-12">
+            <!-- Page Heading -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="fw-bold">Hasil Pemindaian</h1>
+                <div>
+                    <a href="{% url 'scan_history' %}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-history me-1"></i> Riwayat
+                    </a>
+                    <a href="{% url 'nmap_scan' %}" class="btn btn-primary">
+                        <i class="fas fa-redo me-1"></i> Scan Baru
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Scan Summary -->
+            <div class="card shadow-sm border-0 rounded-lg mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Ringkasan Pemindaian</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="vulnerability-summary">
+                                <div class="summary-item mb-2">
+                                    <strong>Target:</strong> {{ scan.target }}
+                                </div>
+                                <div class="summary-item mb-2">
+                                    <strong>Tool:</strong> <span class="badge bg-primary">{{ scan.tool|upper }}</span>
+                                </div>
+                                <div class="summary-item mb-2">
+                                    <strong>Tipe Scan:</strong> {{ scan.scan_type|title }}
+                                </div>
+                                <div class="summary-item mb-2">
+                                    <strong>Waktu:</strong> {{ scan.created_at|date:"d M Y, H:i:s" }}
+                                </div>
+                                <div class="summary-item mb-2">
+                                    <strong>Total Temuan:</strong> {{ scan.get_total_vulnerabilities }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <div class="display-1 text-success">{{ score }}</div>
+                            <h5>Skor Keamanan</h5>
+                            <p class="text-muted">
+                                {% if score >= 75 %}
+                                Kondisi keamanan baik
+                                {% else %}
+                                Perlu beberapa perbaikan
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Vulnerability Chart -->
+            {% if chart %}
+            <div class="card shadow-sm border-0 rounded-lg mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Diagram Kerentanan</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="data:image/png;base64,{{ chart }}" class="img-fluid" alt="Vulnerability Chart" style="max-height: 400px;">
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- AI Recommendation -->
+            {% if scan.recommendation %}
+            <div class="card shadow-sm border-0 rounded-lg mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-robot me-2"></i>Rekomendasi AI</h5>
+                </div>
+                <div class="card-body">
+                    <div class="ai-recommendation p-3 border rounded bg-light">
+                        <h6 class="text-primary mb-3">Cohere AI Analysis</h6>
+                        <div class="recommendation-content">
+                            {{ scan.recommendation|linebreaks }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Comprehensive Scan Results -->
+            <div class="card shadow-sm border-0 rounded-lg">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Detail Hasil Comprehensive Scan</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Comprehensive Scan:</strong> Hasil lengkap dari pemindaian menyeluruh.
+                    </div>
+                    
+                    <!-- Simple Tabs -->
+                    <ul class="nav nav-tabs mb-4" id="scanTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">
+                                <i class="fas fa-list me-1"></i> Summary
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="raw-tab" data-bs-toggle="tab" data-bs-target="#raw" type="button" role="tab">
+                                <i class="fas fa-code me-1"></i> Raw Output
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="scanTabsContent">
+                        <!-- Summary Tab -->
+                        <div class="tab-pane fade show active" id="summary" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-server me-2"></i>Host Information</h6>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">Target: <strong>{{ scan.target }}</strong></li>
+                                        <li class="list-group-item">Tool: <strong>{{ scan.tool|upper }}</strong></li>
+                                        <li class="list-group-item">Scan Type: <strong>{{ scan.scan_type|title }}</strong></li>
+                                        <li class="list-group-item">Status: <span class="badge bg-success">Completed</span></li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-shield-alt me-2"></i>Security Summary</h6>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">Critical: <span class="badge bg-danger">{{ scan.critical_count }}</span></li>
+                                        <li class="list-group-item">High: <span class="badge bg-warning">{{ scan.high_count }}</span></li>
+                                        <li class="list-group-item">Medium: <span class="badge bg-info">{{ scan.medium_count }}</span></li>
+                                        <li class="list-group-item">Low: <span class="badge bg-success">{{ scan.low_count }}</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Raw Output Tab -->
+                        <div class="tab-pane fade" id="raw" role="tabpanel">
+                            <div class="card bg-dark text-light">
+                                <div class="card-body">
+                                    <pre style="max-height: 500px; overflow-y: auto; font-size: 12px;">{{ scan.result }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="text-center mt-4">
+                <a href="{% url 'scan_history' %}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-history me-1"></i> Kembali ke Riwayat
+                </a>
+                <a href="{% url 'delete_scan' scan.id %}" class="btn btn-danger" onclick="return confirm('Hapus hasil scan ini?')">
+                    <i class="fas fa-trash me-1"></i> Hapus Hasil
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

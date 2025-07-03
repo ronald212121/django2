@@ -1,0 +1,1018 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}NMAP Scanner - Enhanced{% endblock %}
+
+{% block extra_css %}
+<style>
+    .option-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid #e9ecef;
+        height: 100%;
+    }
+    
+    .option-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        border-color: #007bff;
+    }
+    
+    .option-card.selected {
+        border-color: #007bff;
+        background-color: rgba(0, 123, 255, 0.05);
+        transform: translateY(-3px);
+    }
+    
+    .option-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .preset-btn {
+        margin-bottom: 0.5rem;
+        text-align: left;
+        border: 1px solid #dee2e6;
+    }
+    
+    .preset-btn:hover {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+    
+    .preset-btn.active {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+    
+    .custom-parameters-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+    
+    .timing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .timing-option {
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+    }
+    
+    .timing-option:hover {
+        border-color: #007bff;
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+    
+    .timing-option.selected {
+        border-color: #007bff;
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .port-preset {
+        display: inline-block;
+        margin: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 15px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+    
+    .port-preset:hover {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .code-example {
+        background-color: #f8f9fa;
+        border-left: 4px solid #28a745;
+        padding: 0.75rem;
+        font-family: 'Courier New', monospace;
+        border-radius: 0 5px 5px 0;
+    }
+
+    /* Enhanced Spinning Shield Loading Animation */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(5px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .loading-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .loading-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 25px;
+        padding: 50px 40px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        transform: scale(0.8);
+        transition: transform 0.3s ease-in-out;
+        min-width: 350px;
+    }
+
+    .loading-overlay.active .loading-container {
+        transform: scale(1);
+    }
+
+    /* Main Shield Loader */
+    .shield-loader {
+        width: 100px;
+        height: 100px;
+        position: relative;
+        margin: 0 auto 30px;
+    }
+
+    /* Shield Icon */
+    .shield-loader::before {
+        content: "🛡️";
+        font-size: 70px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: spinShield 2.5s linear infinite;
+        filter: drop-shadow(0 0 15px rgba(40, 167, 69, 0.6));
+        z-index: 2;
+    }
+
+    /* Outer Ring */
+    .shield-loader::after {
+        content: "";
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border: 4px solid transparent;
+        border-top: 4px solid #28a745;
+        border-right: 4px solid rgba(40, 167, 69, 0.3);
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: spinRing 2s linear infinite;
+        z-index: 1;
+    }
+
+    /* Inner Ring */
+    .shield-loader .inner-ring {
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        border: 3px solid transparent;
+        border-bottom: 3px solid #007bff;
+        border-left: 3px solid rgba(0, 123, 255, 0.3);
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: spinRingReverse 1.5s linear infinite;
+        z-index: 0;
+    }
+
+    /* Scanning Effect */
+    .shield-loader .scan-line {
+        position: absolute;
+        width: 2px;
+        height: 60px;
+        background: linear-gradient(to top, transparent, #28a745, transparent);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -100%);
+        transform-origin: bottom center;
+        animation: scanRotate 3s linear infinite;
+        z-index: 3;
+    }
+
+    /* Particles Effect */
+    .shield-loader .particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: #28a745;
+        border-radius: 50%;
+        opacity: 0;
+        animation: particleFloat 2s ease-in-out infinite;
+    }
+
+    .shield-loader .particle:nth-child(2) {
+        top: 20%;
+        left: 80%;
+        animation-delay: 0.5s;
+    }
+
+    .shield-loader .particle:nth-child(3) {
+        bottom: 20%;
+        right: 80%;
+        animation-delay: 1s;
+    }
+
+    .shield-loader .particle:nth-child(4) {
+        bottom: 30%;
+        left: 15%;
+        animation-delay: 1.5s;
+    }
+
+    /* Loading Text Styles */
+    .loading-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #fff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .loading-subtitle {
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 25px;
+        font-weight: 400;
+    }
+
+    .loading-details {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 25px;
+        line-height: 1.5;
+    }
+
+    /* Animated Dots */
+    .loading-dots::after {
+        content: '';
+        animation: loadingDots 1.5s infinite;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+        width: 250px;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        margin: 20px auto;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745 0%, #007bff 50%, #28a745 100%);
+        border-radius: 4px;
+        animation: progressFlow 3s ease-in-out infinite;
+        box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+    }
+
+    .progress-text {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 10px;
+        font-weight: 500;
+    }
+
+    /* Status Indicators */
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 20px;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .status-icon {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #28a745;
+        margin-right: 8px;
+        animation: statusPulse 2s ease-in-out infinite;
+        box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    }
+
+    /* Animations */
+    @keyframes spinShield {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @keyframes spinRing {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @keyframes spinRingReverse {
+        0% { transform: translate(-50%, -50%) rotate(360deg); }
+        100% { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+
+    @keyframes scanRotate {
+        0% { transform: translate(-50%, -100%) rotate(0deg); opacity: 1; }
+        100% { transform: translate(-50%, -100%) rotate(360deg); opacity: 1; }
+    }
+
+    @keyframes particleFloat {
+        0%, 100% { opacity: 0; transform: translateY(0px) scale(1); }
+        50% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+    }
+
+    @keyframes loadingDots {
+        0%, 20% { content: ''; }
+        40% { content: '.'; }
+        60% { content: '..'; }
+        80%, 100% { content: '...'; }
+    }
+
+    @keyframes progressFlow {
+        0% { width: 0%; transform: translateX(-100%); }
+        50% { width: 100%; transform: translateX(0%); }
+        100% { width: 100%; transform: translateX(100%); }
+    }
+
+    @keyframes statusPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.8; }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .loading-container {
+            margin: 20px;
+            padding: 40px 30px;
+            min-width: 300px;
+        }
+        
+        .shield-loader {
+            width: 80px;
+            height: 80px;
+        }
+        
+        .shield-loader::before {
+            font-size: 50px;
+        }
+        
+        .shield-loader::after {
+            width: 100px;
+            height: 100px;
+        }
+        
+        .loading-title {
+            font-size: 20px;
+        }
+        
+        .progress-container {
+            width: 200px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Page Heading -->
+            <div class="text-center mb-5" data-aos="fade-up">
+                <h1 class="fw-bold text-success">
+                    <i class="fas fa-network-wired me-3"></i>NMAP Scanner Enhanced
+                </h1>
+                <p class="text-muted fs-5">Advanced Network Discovery & Security Auditing Tool</p>
+            </div>
+            
+            <!-- Alert Messages -->
+            {% if messages %}
+                <div class="alert-container mb-4">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>{{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="card shadow-lg border-0 rounded-lg" data-aos="fade-up">
+                <div class="card-header bg-success text-white py-3">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-cog me-2"></i>Network Scan Configuration
+                    </h3>
+                </div>
+                
+                <div class="card-body p-4">
+                    <form action="{% url 'nmap_scan' %}" method="post" id="nmap-scan-form" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Target Input -->
+                        <div class="mb-4">
+                            <label for="target" class="form-label fw-bold">
+                                <i class="fas fa-crosshairs me-2 text-success"></i>Target (IP or Domain)
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="fas fa-server"></i></span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="target" 
+                                       name="target" 
+                                       placeholder="192.168.1.1, 10.0.0.0/24, scanme.nmap.org" 
+                                       required>
+                                <div class="invalid-feedback">
+                                    Please provide a valid target IP address or domain.
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Enter IP address, domain, or CIDR notation. Examples: 192.168.1.1, scanme.nmap.org, 10.0.0.0/24
+                            </div>
+                        </div>
+                        
+                        <!-- Scan Type Selection -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold mb-3">
+                                <i class="fas fa-tasks me-2 text-info"></i>Scan Type Selection
+                            </label>
+                            
+                            <div class="row g-3">
+                                <!-- OS Detection -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card" data-scan-type="os">
+                                        <div class="card-body text-center p-3">
+                                            <div class="option-icon text-info">
+                                                <i class="fas fa-desktop"></i>
+                                            </div>
+                                            <h6 class="card-title fw-bold">OS Detection</h6>
+                                            <p class="card-text small text-muted mb-3">
+                                                Identify operating system
+                                            </p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                       type="radio" 
+                                                       name="scan_type" 
+                                                       id="os" 
+                                                       value="os">
+                                                <label class="form-check-label fw-bold text-info" for="os">
+                                                    Select
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Port Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card" data-scan-type="port">
+                                        <div class="card-body text-center p-3">
+                                            <div class="option-icon text-primary">
+                                                <i class="fas fa-network-wired"></i>
+                                            </div>
+                                            <h6 class="card-title fw-bold">Port Scan</h6>
+                                            <p class="card-text small text-muted mb-3">
+                                                Discover open ports
+                                            </p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                       type="radio" 
+                                                       name="scan_type" 
+                                                       id="port" 
+                                                       value="port" 
+                                                       checked>
+                                                <label class="form-check-label fw-bold text-primary" for="port">
+                                                    Select
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Vulnerability Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card" data-scan-type="vuln">
+                                        <div class="card-body text-center p-3">
+                                            <div class="option-icon text-danger">
+                                                <i class="fas fa-bug"></i>
+                                            </div>
+                                            <h6 class="card-title fw-bold">Vulnerability</h6>
+                                            <p class="card-text small text-muted mb-3">
+                                                Security vulnerability scan
+                                            </p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                       type="radio" 
+                                                       name="scan_type" 
+                                                       id="vuln" 
+                                                       value="vuln">
+                                                <label class="form-check-label fw-bold text-danger" for="vuln">
+                                                    Select
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Comprehensive Scan -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card option-card" data-scan-type="comprehensive">
+                                        <div class="card-body text-center p-3">
+                                            <div class="option-icon text-warning">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </div>
+                                            <h6 class="card-title fw-bold">Comprehensive</h6>
+                                            <p class="card-text small text-muted mb-3">
+                                                Full network assessment
+                                            </p>
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                       type="radio" 
+                                                       name="scan_type" 
+                                                       id="comprehensive" 
+                                                       value="comprehensive">
+                                                <label class="form-check-label fw-bold text-warning" for="comprehensive">
+                                                    Select
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Options Toggle -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="show-advanced">
+                                <label class="form-check-label fw-bold" for="show-advanced">
+                                    <i class="fas fa-cogs me-2"></i>Show Advanced Options
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Options Section -->
+                        <div id="advanced-options" class="mb-4" style="display: none;">
+                            <div class="custom-parameters-section">
+                                <h5 class="text-success mb-4">
+                                    <i class="fas fa-sliders-h me-2"></i>Advanced Configuration
+                                </h5>
+                                
+                                <!-- Timing Templates -->
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">
+                                        <i class="fas fa-clock me-2"></i>Timing Template
+                                    </h6>
+                                    <div class="timing-grid">
+                                        <div class="timing-option" data-timing="0">
+                                            <strong>T0 - Paranoid</strong><br>
+                                            <small>Very slow, stealthy</small>
+                                        </div>
+                                        <div class="timing-option" data-timing="1">
+                                            <strong>T1 - Sneaky</strong><br>
+                                            <small>Slow, avoid IDS</small>
+                                        </div>
+                                        <div class="timing-option" data-timing="2">
+                                            <strong>T2 - Polite</strong><br>
+                                            <small>Slower, less bandwidth</small>
+                                        </div>
+                                        <div class="timing-option selected" data-timing="3">
+                                            <strong>T3 - Normal</strong><br>
+                                            <small>Default timing</small>
+                                        </div>
+                                        <div class="timing-option" data-timing="4">
+                                            <strong>T4 - Aggressive</strong><br>
+                                            <small>Fast, assume fast network</small>
+                                        </div>
+                                        <div class="timing-option" data-timing="5">
+                                            <strong>T5 - Insane</strong><br>
+                                            <small>Very fast, may sacrifice accuracy</small>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="timing_template" id="timing_template" value="3">
+                                </div>
+                                
+                                <!-- Port Range Configuration -->
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">
+                                        <i class="fas fa-plug me-2"></i>Port Range Configuration
+                                    </h6>
+                                    <div class="mb-3">
+                                        <label for="port_range" class="form-label">Custom Port Range</label>
+                                        <input type="text" 
+                                               class="form-control font-monospace" 
+                                               id="port_range" 
+                                               name="port_range" 
+                                               placeholder="1-1000, 22,80,443, or leave empty for default">
+                                        <div class="form-text">
+                                            <div class="code-example mt-2">
+                                                <strong>Port Range Examples:</strong><br>
+                                                <code>1-1000</code> → Scan ports 1 to 1000<br>
+                                                <code>22,80,443,8080</code> → Scan specific ports<br>
+                                                <code>1-65535</code> → Scan all ports (slow)
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Port Presets -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Quick Port Presets:</label><br>
+                                        <span class="port-preset" data-ports="22,80,443">Common (SSH, HTTP, HTTPS)</span>
+                                        <span class="port-preset" data-ports="21,22,23,25,53,80,110,143,443,993,995">Mail & Web</span>
+                                        <span class="port-preset" data-ports="135,139,445,1433,3389">Windows</span>
+                                        <span class="port-preset" data-ports="22,3306,5432,6379,27017">Database</span>
+                                        <span class="port-preset" data-ports="1-1000">Top 1000</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Scan Options -->
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">
+                                        <i class="fas fa-tools me-2"></i>Scan Options
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="no_ping" name="no_ping">
+                                                <label class="form-check-label" for="no_ping">
+                                                    <strong>Skip Host Discovery (-Pn)</strong><br>
+                                                    <small class="text-muted">Scan even if host doesn't respond to ping</small>
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="service_version" name="service_version">
+                                                <label class="form-check-label" for="service_version">
+                                                    <strong>Service Version Detection (-sV)</strong><br>
+                                                    <small class="text-muted">Detect service versions on open ports</small>
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="os_detection" name="os_detection">
+                                                <label class="form-check-label" for="os_detection">
+                                                    <strong>OS Detection (-O)</strong><br>
+                                                    <small class="text-muted">Enable OS fingerprinting</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="script_scan" name="script_scan">
+                                                <label class="form-check-label" for="script_scan">
+                                                    <strong>Default Scripts (-sC)</strong><br>
+                                                    <small class="text-muted">Run default NSE scripts</small>
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="aggressive" name="aggressive">
+                                                <label class="form-check-label" for="aggressive">
+                                                    <strong>Aggressive Scan (-A)</strong><br>
+                                                    <small class="text-muted">Enable OS detection, version detection, script scanning, and traceroute</small>
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="udp_scan" name="udp_scan">
+                                                <label class="form-check-label" for="udp_scan">
+                                                    <strong>UDP Scan (-sU)</strong><br>
+                                                    <small class="text-muted">Scan UDP ports (slower)</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success btn-lg px-5 py-3">
+                                <i class="fas fa-search me-2"></i>Start Network Scan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Info Card -->
+            <div class="card mt-4 border-0 shadow-sm" data-aos="fade-up" data-aos-delay="100">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-success">
+                        <i class="fas fa-info-circle me-2"></i>About NMAP Scanner
+                    </h5>
+                    <p class="card-text">
+                        NMAP (Network Mapper) is a powerful open-source tool for network discovery and security auditing. 
+                        It helps system administrators and security professionals discover hosts, services, and vulnerabilities on computer networks.
+                    </p>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6 class="text-success">Core Features:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>Host discovery & network mapping</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Port scanning (TCP/UDP)</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Service version detection</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Operating system fingerprinting</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info">Advanced Capabilities:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-shield-alt text-info me-2"></i>NSE (Nmap Scripting Engine)</li>
+                                <li><i class="fas fa-shield-alt text-info me-2"></i>Vulnerability detection scripts</li>
+                                <li><i class="fas fa-shield-alt text-info me-2"></i>Firewall/IDS evasion techniques</li>
+                                <li><i class="fas fa-shield-alt text-info me-2"></i>Network topology discovery</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Spinning Shield Loading Animation -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-container">
+        <div class="shield-loader">
+            <div class="inner-ring"></div>
+            <div class="scan-line"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+        </div>
+        
+        <div class="loading-title">Network Scan in Progress</div>
+        <div class="loading-subtitle" id="loadingSubtitle">Discovering hosts and analyzing network security</div>
+        <div class="loading-details" id="loadingDetails">
+            Scan duration depends on target size and selected options<span class="loading-dots"></span>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-bar"></div>
+        </div>
+        <div class="progress-text" id="progressText">Initializing scan...</div>
+        
+        <div class="status-indicator">
+            <div class="status-icon"></div>
+            <span id="statusText">NMAP Scanner Active</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Loading Animation Controller
+const LoadingController = {
+    overlay: null,
+    progressText: null,
+    statusText: null,
+    loadingDetails: null,
+    progressMessages: [
+        "Initializing scan...",
+        "Discovering hosts...",
+        "Port scanning in progress...",
+        "Analyzing services...",
+        "OS detection running...",
+        "Vulnerability assessment...",
+        "Compiling results...",
+        "Finalizing scan report..."
+    ],
+    statusMessages: [
+        "NMAP Scanner Active",
+        "Network Discovery",
+        "Port Analysis",
+        "Service Detection", 
+        "OS Fingerprinting",
+        "Security Assessment",
+        "Data Processing",
+        "Scan Complete"
+    ],
+    currentMessageIndex: 0,
+    messageInterval: null,
+
+    init() {
+        this.overlay = document.getElementById('loadingOverlay');
+        this.progressText = document.getElementById('progressText');
+        this.statusText = document.getElementById('statusText');
+        this.loadingDetails = document.getElementById('loadingDetails');
+    },
+
+    show() {
+        if (!this.overlay) this.init();
+        
+        this.overlay.classList.add('active');
+        this.currentMessageIndex = 0;
+        this.startMessageRotation();
+        
+        // Disable scrolling
+        document.body.style.overflow = 'hidden';
+    },
+
+    hide() {
+        if (!this.overlay) return;
+        
+        this.overlay.classList.remove('active');
+        this.stopMessageRotation();
+        
+        // Re-enable scrolling
+        document.body.style.overflow = '';
+    },
+
+    startMessageRotation() {
+        this.updateMessages();
+        
+        this.messageInterval = setInterval(() => {
+            this.currentMessageIndex = (this.currentMessageIndex + 1) % this.progressMessages.length;
+            this.updateMessages();
+        }, 2500);
+    },
+
+    stopMessageRotation() {
+        if (this.messageInterval) {
+            clearInterval(this.messageInterval);
+            this.messageInterval = null;
+        }
+    },
+
+    updateMessages() {
+        if (this.progressText) {
+            this.progressText.textContent = this.progressMessages[this.currentMessageIndex];
+        }
+        if (this.statusText) {
+            this.statusText.textContent = this.statusMessages[this.currentMessageIndex];
+        }
+    },
+
+    setCustomMessage(progress, status, details) {
+        if (this.progressText && progress) {
+            this.progressText.textContent = progress;
+        }
+        if (this.statusText && status) {
+            this.statusText.textContent = status;
+        }
+        if (this.loadingDetails && details) {
+            this.loadingDetails.innerHTML = details + '<span class="loading-dots"></span>';
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Loading Controller
+    LoadingController.init();
+
+    // Element selections
+    const scanTypeRadios = document.querySelectorAll('input[name="scan_type"]');
+    const advancedOptionsDiv = document.getElementById('advanced-options');
+    const showAdvancedCheckbox = document.getElementById('show-advanced');
+    const optionCards = document.querySelectorAll('.option-card');
+    const timingOptions = document.querySelectorAll('.timing-option');
+    const timingInput = document.getElementById('timing_template');
+    const portPresets = document.querySelectorAll('.port-preset');
+    const portRangeInput = document.getElementById('port_range');
+    const form = document.getElementById('nmap-scan-form');
+    
+    // Initialize
+    updateCardSelection();
+    
+    // Advanced options toggle
+    showAdvancedCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            advancedOptionsDiv.style.display = 'block';
+        } else {
+            advancedOptionsDiv.style.display = 'none';
+        }
+    });
+    
+    // Scan type change handlers
+    scanTypeRadios.forEach(radio => {
+        radio.addEventListener('change', updateCardSelection);
+    });
+    
+    // Option card click handlers
+    optionCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const scanType = this.getAttribute('data-scan-type');
+            const radio = document.getElementById(scanType);
+            if (radio) {
+                radio.checked = true;
+                updateCardSelection();
+            }
+        });
+    });
+    
+    // Timing template selection
+    timingOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            // Remove selected class from all options
+            timingOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Add selected class to clicked option
+            this.classList.add('selected');
+            
+            // Update hidden input value
+            const timing = this.getAttribute('data-timing');
+            timingInput.value = timing;
+        });
+    });
+    
+    // Port preset handlers
+    portPresets.forEach(preset => {
+        preset.addEventListener('click', function() {
+            const ports = this.getAttribute('data-ports');
+            portRangeInput.value = ports;
+            
+            // Visual feedback
+            portPresets.forEach(p => p.style.backgroundColor = '#f8f9fa');
+            this.style.backgroundColor = '#007bff';
+            this.style.color = 'white';
+            
+            // Reset after 2 seconds
+            setTimeout(() => {
+                this.style.backgroundColor = '#f8f9fa';
+                this.style.color = 'initial';
+            }, 2000);
+        });
+    });
+    
+    // Form submission handler
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        } else {
+            // Show enhanced loading animation
+            LoadingController.show();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // Aggressive scan checkbox handler
+    const aggressiveCheckbox = document.getElementById('aggressive');
+    const serviceVersionCheckbox = document.getElementById('service_version');
+    const osDetectionCheckbox = document.getElementById('os_detection');
+    const scriptScanCheckbox = document.getElementById('script_scan');
+    
+    if (aggressiveCheckbox) {
+        aggressiveCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                // Enable other options when aggressive is checked
+                serviceVersionCheckbox.checked = true;
+                osDetectionCheckbox.checked = true;
+                scriptScanCheckbox.checked = true;
+            }
+        });
+    }
+    
+    // Functions
+    function updateCardSelection() {
+        optionCards.forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        const checkedRadio = document.querySelector('input[name="scan_type"]:checked');
+        if (checkedRadio) {
+            const scanType = checkedRadio.value;
+            const selectedCard = document.querySelector(`.option-card[data-scan-type="${scanType}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+        }
+    }
+});
+
+// Global functions for easy access
+function showLoadingAnimation() {
+    LoadingController.show();
+}
+
+function hideLoadingAnimation() {
+    LoadingController.hide();
+}
+
+function updateLoadingMessage(progress, status, details) {
+    LoadingController.setCustomMessage(progress, status, details);
+}
+</script>
+{% endblock %}

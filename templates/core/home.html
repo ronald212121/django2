@@ -1,0 +1,582 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Vulnerability Scanner - Home{% endblock %}
+
+{% block extra_css %}
+<style>
+/* CSS untuk logo vulnerability scanner */
+.logo-container {
+    padding: 2rem 0;
+}
+
+.vulnerability-logo {
+    width: 400px;
+    height: 400px;
+    max-width: 100%;
+    transition: transform 0.3s ease;
+    filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.15));
+}
+
+.vulnerability-logo:hover {
+    transform: scale(1.08);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+    .vulnerability-logo {
+        width: 350px;
+        height: 350px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .vulnerability-logo {
+        width: 320px;
+        height: 320px;
+    }
+}
+
+@media (max-width: 992px) {
+    .vulnerability-logo {
+        width: 280px;
+        height: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .vulnerability-logo {
+        width: 240px;
+        height: 240px;
+    }
+    
+    .logo-container {
+        padding: 1rem 0;
+    }
+}
+
+/* Feature icons styling */
+.feature-icon {
+    font-size: 3rem;
+    color: #0d6efd;
+    margin-bottom: 1rem;
+}
+
+.feature-icon i {
+    display: block;
+}
+
+/* Enhanced animations for mobile */
+@media (prefers-reduced-motion: no-preference) {
+    .vulnerability-logo {
+        animation: float 6s ease-in-out infinite;
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center hero-content">
+            <div class="col-lg-6" data-aos="fade-right">
+                <h1 class="hero-title">
+                    {% if user.is_authenticated %}
+                        Selamat Datang, {{ user.profile.display_name|default:user.username }}!
+                    {% else %}
+                        Deteksi Kerentanan Sistem Anda
+                    {% endif %}
+                </h1>
+                <p class="hero-text">
+                    {% if user.is_authenticated %}
+                        Kelola keamanan sistem Anda dengan tools scanning terdepan. Mulai scanning untuk mengidentifikasi potensi kerentanan.
+                    {% else %}
+                        Scanning tool canggih dengan NMAP & NIKTO yang dipadukan dengan kecerdasan buatan untuk memberikan analisis dan rekomendasi terbaik tentang keamanan sistem Anda.
+                    {% endif %}
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'nmap_scan' %}" class="btn btn-light btn-lg">
+                            <i class="fas fa-search me-2"></i> Mulai Scan dengan NMAP
+                        </a>
+                        <a href="{% url 'nikto_scan' %}" class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-shield-alt me-2"></i> Scan dengan NIKTO
+                        </a>
+                    {% else %}
+                        <a href="{% url 'account_login' %}" class="btn btn-light btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i> Login untuk Mulai Scanning
+                        </a>
+                        <a href="{% url 'account_signup' %}" class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-user-plus me-2"></i> Daftar Gratis
+                        </a>
+                    {% endif %}
+                </div>
+                
+                <!-- User Stats (hanya tampil jika sudah login) -->
+                {% if user.is_authenticated %}
+                <div class="hero-stats mt-5">
+                    <div class="row">
+                        <div class="col-4 text-center">
+                            <h3 class="text-primary mb-1">{{ total_scans }}</h3>
+                            <small class="text-muted">Total Scan</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <h3 class="text-success mb-1">{{ recent_scans|length }}</h3>
+                            <small class="text-muted">Scan Terbaru</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <h3 class="text-info mb-1">{% if user.profile.is_verified %}Pro{% else %}Free{% endif %}</h3>
+                            <small class="text-muted">Status Akun</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-lg-6 d-none d-lg-block" data-aos="fade-left">
+                <!-- NEW ANIMATED LOGO -->
+                <div class="logo-container d-flex justify-content-center align-items-center">
+                    <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" class="vulnerability-logo">
+                        <defs>
+                            <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#0d6efd;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#0a58ca;stop-opacity:1" />
+                            </linearGradient>
+                            <linearGradient id="successGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#198754;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#146c43;stop-opacity:1" />
+                            </linearGradient>
+                            <linearGradient id="dangerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#dc3545;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#b02a37;stop-opacity:1" />
+                            </linearGradient>
+                            <linearGradient id="warningGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#ffc107;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#ff8c00;stop-opacity:1" />
+                            </linearGradient>
+                            <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" style="stop-color:#0d6efd;stop-opacity:0.3" />
+                                <stop offset="70%" style="stop-color:#0d6efd;stop-opacity:0.1" />
+                                <stop offset="100%" style="stop-color:#0d6efd;stop-opacity:0" />
+                            </radialGradient>
+                            <filter id="shadowFilter" x="-50%" y="-50%" width="200%" height="200%">
+                                <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.25"/>
+                            </filter>
+                            <filter id="glowFilter" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                <feMerge> 
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        
+                        <circle cx="200" cy="200" r="140" fill="url(#glowGrad)" opacity="0.8">
+                            <animate attributeName="r" values="140;160;140" dur="4s" repeatCount="indefinite"/>
+                            <animate attributeName="opacity" values="0.8;1;0.8" dur="4s" repeatCount="indefinite"/>
+                        </circle>
+                        
+                        <path d="M200 80 L140 110 L140 200 Q140 260 200 300 Q260 260 260 200 L260 110 Z" 
+                              fill="url(#primaryGrad)" 
+                              filter="url(#shadowFilter)"
+                              opacity="1">
+                            <animate attributeName="opacity" values="1;0.95;1" dur="3s" repeatCount="indefinite"/>
+                        </path>
+                        
+                        <path d="M200 90 L150 115 L150 195 Q150 245 200 280 Q250 245 250 195 L250 115 Z" 
+                              fill="none" 
+                              stroke="#ffffff" 
+                              stroke-width="3" 
+                              opacity="0.9"/>
+                        
+                        <g transform="translate(200,190)">
+                            <rect x="-18" y="0" width="36" height="30" rx="4" fill="#ffffff" opacity="1">
+                                <animate attributeName="opacity" values="1;0.9;1" dur="2s" repeatCount="indefinite"/>
+                            </rect>
+                            <path d="M-12 0 Q-12 -15 0 -15 Q12 -15 12 0" 
+                                  fill="none" 
+                                  stroke="#ffffff" 
+                                  stroke-width="4" 
+                                  opacity="1">
+                                <animate attributeName="opacity" values="1;0.9;1" dur="2s" repeatCount="indefinite"/>
+                            </path>
+                            <circle cx="0" cy="10" r="4" fill="url(#primaryGrad)"/>
+                            <rect x="-2" y="10" width="4" height="10" fill="url(#primaryGrad)"/>
+                        </g>
+                        
+                        <g opacity="0.8">
+                            <line x1="200" y1="200" x2="320" y2="200" 
+                                  stroke="url(#successGrad)" 
+                                  stroke-width="3" 
+                                  filter="url(#glowFilter)"
+                                  transform-origin="200 200">
+                                <animateTransform attributeName="transform" 
+                                                  type="rotate" 
+                                                  values="0 200 200;360 200 200" 
+                                                  dur="3s" 
+                                                  repeatCount="indefinite"/>
+                            </line>
+                            <circle cx="200" cy="200" r="85" fill="none" stroke="#198754" stroke-width="2" opacity="0.6">
+                                <animate attributeName="r" values="85;125;85" dur="4s" repeatCount="indefinite"/>
+                                <animate attributeName="opacity" values="0.6;0.9;0.6" dur="4s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="200" cy="200" r="115" fill="none" stroke="#198754" stroke-width="2" opacity="0.4">
+                                <animate attributeName="r" values="115;145;115" dur="5s" repeatCount="indefinite"/>
+                                <animate attributeName="opacity" values="0.4;0.7;0.4" dur="5s" repeatCount="indefinite"/>
+                            </circle>
+                        </g>
+                        
+                        <g>
+                            <circle cx="160" cy="150" r="5" fill="url(#dangerGrad)" filter="url(#glowFilter)">
+                                <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/>
+                                <animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="240" cy="170" r="5" fill="url(#warningGrad)" filter="url(#glowFilter)">
+                                <animate attributeName="opacity" values="0;1;0" dur="2.5s" repeatCount="indefinite" begin="0.5s"/>
+                                <animate attributeName="r" values="5;8;5" dur="2.5s" repeatCount="indefinite" begin="0.5s"/>
+                            </circle>
+                            <circle cx="180" cy="240" r="5" fill="url(#successGrad)" filter="url(#glowFilter)">
+                                <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite" begin="1s"/>
+                                <animate attributeName="r" values="5;8;5" dur="3s" repeatCount="indefinite" begin="1s"/>
+                            </circle>
+                            <circle cx="220" cy="230" r="5" fill="url(#primaryGrad)" filter="url(#glowFilter)">
+                                <animate attributeName="opacity" values="0;1;0" dur="2.2s" repeatCount="indefinite" begin="1.5s"/>
+                                <animate attributeName="r" values="5;8;5" dur="2.2s" repeatCount="indefinite" begin="1.5s"/>
+                            </circle>
+                        </g>
+                        
+                        <g opacity="0.6" font-family="monospace" font-size="12" font-weight="bold">
+                            <text x="100" y="120" fill="#198754">
+                                <tspan>101</tspan>
+                                <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/>
+                            </text>
+                            <text x="290" y="140" fill="#0d6efd">
+                                <tspan>010</tspan>
+                                <animate attributeName="opacity" values="0.6;1;0.6" dur="3.5s" repeatCount="indefinite"/>
+                            </text>
+                            <text x="110" y="280" fill="#dc3545">
+                                <tspan>110</tspan>
+                                <animate attributeName="opacity" values="0.6;1;0.6" dur="2.8s" repeatCount="indefinite"/>
+                            </text>
+                            <text x="280" y="290" fill="#ffc107">
+                                <tspan>001</tspan>
+                                <animate attributeName="opacity" values="0.6;1;0.6" dur="3.2s" repeatCount="indefinite"/>
+                            </text>
+                        </g>
+                        
+                        <g transform="translate(320, 120)">
+                            <circle r="10" fill="url(#successGrad)" opacity="0.9">
+                                <animate attributeName="opacity" values="0.9;1;0.9" dur="1.5s" repeatCount="indefinite"/>
+                            </circle>
+                            <text x="0" y="3" text-anchor="middle" font-size="10" fill="#ffffff" font-weight="bold">✓</text>
+                        </g>
+                        
+                        <g transform="translate(80, 120)">
+                            <circle r="10" fill="url(#dangerGrad)" opacity="0.9">
+                                <animate attributeName="opacity" values="0.9;1;0.9" dur="2s" repeatCount="indefinite"/>
+                            </circle>
+                            <text x="0" y="3" text-anchor="middle" font-size="10" fill="#ffffff" font-weight="bold">!</text>
+                        </g>
+                        
+                        <g opacity="0.7" font-family="Arial, sans-serif" font-size="10" font-weight="bold">
+                            <text x="130" y="340" fill="#0d6efd" text-anchor="middle">NMAP</text>
+                            <text x="270" y="340" fill="#dc3545" text-anchor="middle">NIKTO</text>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="fw-bold">Fitur Utama</h2>
+            <p class="text-muted">Tool pemindai kerentanan yang lengkap dengan analisis kecerdasan buatan</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h4 class="mb-3">NMAP Scanner</h4>
+                        <p class="text-muted mb-0">Lakukan pemindaian port, OS detection, service discovery, dan pemindaian kerentanan dengan tool canggih NMAP.</p>
+                        {% if not user.is_authenticated %}
+                        <div class="mt-3">
+                            <span class="badge bg-primary">Perlu Login</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h4 class="mb-3">NIKTO Scanner</h4>
+                        <p class="text-muted mb-0">Deteksi kerentanan web server dengan berbagai opsi pemindaian khusus yang disediakan oleh NIKTO.</p>
+                        {% if not user.is_authenticated %}
+                        <div class="mt-3">
+                            <span class="badge bg-primary">Perlu Login</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h4 class="mb-3">Analisis AI</h4>
+                        <p class="text-muted mb-0">Dapatkan rekomendasi spesifik dari Cohere AI berdasarkan hasil pemindaian untuk meningkatkan keamanan sistem Anda.</p>
+                        {% if not user.is_authenticated %}
+                        <div class="mt-3">
+                            <span class="badge bg-primary">Perlu Login</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="fw-bold">Cara Kerja</h2>
+            <p class="text-muted">Proses pemindaian dan analisis kerentanan sistem Anda</p>
+        </div>
+        
+        <div class="row">
+            {% if not user.is_authenticated %}
+            <div class="col-md-2" data-aos="fade-up" data-aos-delay="50">
+                <div class="text-center mb-4">
+                    <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <h5 class="mt-3">Daftar/Login</h5>
+                    <p class="text-muted small">Buat akun atau login untuk mengakses semua fitur</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="{% if user.is_authenticated %}col-md-3{% else %}col-md-2{% endif %}" data-aos="fade-up" data-aos-delay="100">
+                <div class="text-center mb-4">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <h3 class="m-0">1</h3>
+                    </div>
+                    <h5 class="mt-3">Pilih Tool</h5>
+                    <p class="text-muted small">Pilih antara NMAP atau NIKTO sebagai tool pemindaian utama</p>
+                </div>
+            </div>
+            
+            <div class="{% if user.is_authenticated %}col-md-3{% else %}col-md-2{% endif %}" data-aos="fade-up" data-aos-delay="200">
+                <div class="text-center mb-4">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <h3 class="m-0">2</h3>
+                    </div>
+                    <h5 class="mt-3">Input Target</h5>
+                    <p class="text-muted small">Masukkan URL atau IP target yang ingin dipindai kerentanannya</p>
+                </div>
+            </div>
+            
+            <div class="{% if user.is_authenticated %}col-md-3{% else %}col-md-2{% endif %}" data-aos="fade-up" data-aos-delay="300">
+                <div class="text-center mb-4">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <h3 class="m-0">3</h3>
+                    </div>
+                    <h5 class="mt-3">Proses Scanning</h5>
+                    <p class="text-muted small">Tool akan melakukan pemindaian dan analisis kerentanan</p>
+                </div>
+            </div>
+            
+            <div class="{% if user.is_authenticated %}col-md-3{% else %}col-md-2{% endif %}" data-aos="fade-up" data-aos-delay="400">
+                <div class="text-center mb-4">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <h3 class="m-0">4</h3>
+                    </div>
+                    <h5 class="mt-3">Lihat Hasil</h5>
+                    <p class="text-muted small">Dapatkan hasil dan rekomendasi AI untuk perbaikan</p>
+                </div>
+            </div>
+            
+            {% if not user.is_authenticated %}
+            <div class="col-md-2" data-aos="fade-up" data-aos-delay="450">
+                <div class="text-center mb-4">
+                    <div class="bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-save"></i>
+                    </div>
+                    <h5 class="mt-3">Simpan Hasil</h5>
+                    <p class="text-muted small">Hasil scan tersimpan di akun Anda untuk referensi</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="text-center mt-4" data-aos="fade-up" data-aos-delay="500">
+            {% if user.is_authenticated %}
+                <a href="{% url 'nmap_scan' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-rocket me-2"></i> Mulai Pemindaian Sekarang
+                </a>
+            {% else %}
+                <a href="{% url 'account_signup' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-user-plus me-2"></i> Daftar untuk Mulai Scanning
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% if user.is_authenticated %}
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="fw-bold">Pemindaian Terbaru Anda</h2>
+            <p class="text-muted">Hasil pemindaian kerentanan terbaru yang telah Anda lakukan</p>
+        </div>
+        
+        <div class="row" data-aos="fade-up">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Target</th>
+                                        <th>Tool</th>
+                                        <th>Tipe Scan</th>
+                                        <th>Tanggal</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for scan in recent_scans %}
+                                    <tr>
+                                        <td>{{ scan.target }}</td>
+                                        <td><span class="badge bg-{% if scan.scan_type == 'nmap' %}info{% else %}danger{% endif %}">{{ scan.get_scan_type_display }}</span></td>
+                                        <td>{{ scan.scan_type|upper }}</td>
+                                        <td>{{ scan.created_at|date:"d M Y, H:i" }}</td>
+                                        <td>
+                                            {% comment %}
+                                            FIXED: Calculate total vulnerabilities properly using individual counts
+                                            {% endcomment %}
+                                            {% with critical=scan.critical_count|default:0 high=scan.high_count|default:0 medium=scan.medium_count|default:0 low=scan.low_count|default:0 info=scan.info_count|default:0 %}
+                                                {% with total_vulns=critical|add:high|add:medium|add:low|add:info %}
+                                                    {% if total_vulns == 0 %}
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-shield-alt me-1"></i>Aman
+                                                        </span>
+                                                    {% elif critical > 0 or high > 2 %}
+                                                        <span class="badge bg-danger">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i>Tinggi
+                                                        </span>
+                                                    {% elif high > 0 or medium > 3 %}
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fas fa-exclamation-circle me-1"></i>Sedang
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-info">
+                                                            <i class="fas fa-info-circle me-1"></i>Rendah
+                                                        </span>
+                                                    {% endif %}
+                                                    <small class="text-muted ms-1">({{ total_vulns }})</small>
+                                                {% endwith %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'scan_history' %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i> Lihat
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">
+                                            <p class="text-muted mb-0">Belum ada riwayat pemindaian.</p>
+                                            <a href="{% url 'nmap_scan' %}" class="btn btn-sm btn-primary mt-2">
+                                                <i class="fas fa-search me-1"></i> Mulai Pemindaian
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="{% url 'scan_history' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-history me-1"></i> Lihat Semua Riwayat
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8" data-aos="fade-right">
+                <h2 class="fw-bold">
+                    {% if user.is_authenticated %}
+                        Siap Melindungi Sistem Anda?
+                    {% else %}
+                        Mulai Lindungi Sistem Anda Sekarang
+                    {% endif %}
+                </h2>
+                <p class="mb-lg-0">
+                    {% if user.is_authenticated %}
+                        Gunakan tools scanning terdepan untuk mengidentifikasi dan mengatasi kerentanan sistem Anda.
+                    {% else %}
+                        Deteksi kerentanan dan dapatkan rekomendasi keamanan dari kecerdasan buatan untuk sistem Anda.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end" data-aos="fade-left">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'nmap_scan' %}" class="btn btn-light btn-lg me-2">
+                        <i class="fas fa-search me-1"></i> NMAP
+                    </a>
+                    <a href="{% url 'nikto_scan' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-shield-alt me-1"></i> NIKTO
+                    </a>
+                {% else %}
+                    <a href="{% url 'account_login' %}" class="btn btn-light btn-lg me-2">
+                        <i class="fas fa-sign-in-alt me-1"></i> Login
+                    </a>
+                    <a href="{% url 'account_signup' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-user-plus me-1"></i> Daftar
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

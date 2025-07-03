@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Daftar - Vulnerability Scanner{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header text-center" style="background: #28a745; color: white;">
+                    <h3 style="color: white; margin-bottom: 0;">Daftar Akun Baru</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Google Signup Button -->
+                    <div class="mb-4">
+                        <a href="/accounts/google/login/" class="btn btn-danger btn-lg w-100 mb-3">
+                            <i class="fab fa-google me-2"></i>
+                            Daftar dengan Google
+                        </a>
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <span class="text-muted">atau</span>
+                    </div>
+                    
+                    <!-- Email Signup Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #00d4aa; font-weight: 600;">Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="Masukkan email" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #00d4aa; font-weight: 600;">Password</label>
+                            <input type="password" name="password1" class="form-control" placeholder="Minimal 8 karakter" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label" style="color: #00d4aa; font-weight: 600;">Konfirmasi Password</label>
+                            <input type="password" name="password2" class="form-control" placeholder="Ulangi password" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100" style="background: #00d4aa; border-color: #00d4aa;">Daftar</button>
+                    </form>
+                    
+                    <div class="text-center mt-3">
+                        <p style="color: #6c757d;">Sudah punya akun? <a href="{% url 'account_login' %}" style="color: #007bff;">Login sekarang</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
